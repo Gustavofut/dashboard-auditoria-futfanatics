@@ -1,346 +1,460 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Dashboard Auditoria — FUTFANATICS</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
-  <style>
-    :root{
-      --bg: #ffffff;
-      --dark-blue: #052a4a; /* azul escuro da identidade */
-      --lime: #a7ff3a;    /* verde limão */
-      --muted: #6b7280;
-      --card-shadow: 0 6px 18px rgba(7,15,30,0.08);
-      --radius: 14px;
-      font-family: Inter, system-ui, -apple-system, 'Helvetica Neue', Arial;
-    }
-    html,body{height:100%;margin:0;background:var(--bg);color:var(--dark-blue)}
-    .wrap{max-width:1200px;margin:28px auto;padding:20px}
-    header{display:flex;align-items:center;gap:16px;margin-bottom:18px}
-    .brand{display:flex;flex-direction:column}
-    .brand h1{margin:0;font-size:20px}
-    .brand p{margin:0;color:var(--muted);font-size:13px}
-    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
-    .card{background:#fff;border-radius:var(--radius);box-shadow:var(--card-shadow);padding:16px}
-    .kpi{grid-column: span 3}
-    .wide{grid-column: span 6}
-    .full{grid-column: 1 / -1}
-    .kpi .title{font-size:12px;color:var(--muted);margin-bottom:6px}
-    .kpi .value{font-size:24px;font-weight:700}
-    .small{font-size:13px;color:var(--muted)}
-    .chart-wrap{height:260px}
-    table{width:100%;border-collapse:collapse;font-size:13px}
-    th,td{padding:8px;text-align:left;border-bottom:1px solid #eef2f6}
-    th{font-size:12px;color:var(--muted)}
-    .supplier-bad{color:#b91c1c;font-weight:700}
-    .controls{display:flex;gap:8px;align-items:center}
-    .btn{background:var(--dark-blue);color:#fff;padding:8px 12px;border-radius:10px;cursor:pointer;border:none}
-    .hint{font-size:12px;color:var(--muted)}
-    .legend{display:flex;gap:10px;align-items:center}
-    .legend span{display:inline-flex;align-items:center;gap:6px}
-    .sw{width:12px;height:12px;border-radius:3px;display:inline-block}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Dashboard Auditoria - FUTFANATICS</title>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+
+<!-- Fontes simples -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg: #ffffff;
+    --blue-dark: #052F5F; /* azul escuro FutFanatics */
+    --lime: #b7f24d; /* verde limão */
+    --muted: #f3f5f8;
+    --text: #0d1b2a;
+    --accent: #0b63b7;
+  }
+  *{box-sizing:border-box;font-family:Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;}
+  body{margin:0;background:var(--muted);color:var(--text)}
+  header{background:linear-gradient(90deg,var(--blue-dark),#0b4f8f);color:white;padding:18px 24px;display:flex;align-items:center;gap:16px}
+  header h1{margin:0;font-size:20px}
+  .container{max-width:1200px;margin:22px auto;padding:0 16px;}
+  .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
+  .card{background:var(--bg);border-radius:10px;box-shadow:0 6px 18px rgba(9,30,66,.06);padding:14px}
+  .card.h-100{display:flex;flex-direction:column;justify-content:space-between;height:100%}
+  .kpi{display:flex;gap:12px;align-items:center}
+  .kpi .value{font-weight:700;font-size:22px}
+  .kpi .label{color:#6b7280;font-size:12px}
+  .small{font-size:12px;color:#6b7280}
+  /* layout responsive */
+  .col-12{grid-column:span 12}
+  @media(min-width:700px){
+    .col-8{grid-column:span 8}
+    .col-4{grid-column:span 4}
+    .col-6{grid-column:span 6}
+    .col-3{grid-column:span 3}
+  }
+
+  /* bordas e cabeçalhos */
+  .card h3{margin:0 0 8px 0;font-size:14px;color:var(--blue-dark)}
+  .legend-dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px}
+  footer{padding:18px 24px;text-align:center;color:#6b7280}
+  .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .btn{background:var(--blue-dark);color:white;padding:8px 12px;border-radius:8px;border:0;cursor:pointer}
+  .muted-box{background:#fbfdff;padding:8px;border-radius:8px;border:1px solid #edf2f7}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:6px 8px;border-bottom:1px solid #eef2f7;text-align:left}
+  th{font-weight:600;color:#334155}
+  .rank-item{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px dashed #eef2f7}
+</style>
 </head>
 <body>
-  <div class="wrap">
-    <header>
-      <div style="width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,var(--dark-blue),#0b4f8a);display:flex;align-items:center;justify-content:center;color:white;font-weight:700">FF</div>
-      <div class="brand">
-        <h1>Dashboard Auditoria — FUTFANATICS</h1>
-        <p>Visão semanal / mensal de avarias e produtividade</p>
-      </div>
-      <div style="margin-left:auto" class="controls">
-        <div class="hint">Atualiza automaticamente a cada 5 min.</div>
-        <button class="btn" id="btn-refresh">Atualizar agora</button>
-      </div>
-    </header>
+  <header>
+    <img src="" id="logo" alt="FUTFANATICS" style="width:46px;height:46px;border-radius:8px;background:var(--lime)" />
+    <div>
+      <h1>Dashboard Auditoria — Noturno</h1>
+      <div style="font-size:12px;color:#cfe6ff">Visão semanal / mensal • Dados: Google Sheets</div>
+    </div>
+  </header>
 
-    <section class="grid">
+  <div class="container">
+    <!-- CONTROLES -->
+    <div class="card col-12" style="margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+        <div class="controls">
+          <div class="small">Período (semana de referência):</div>
+          <input id="startDate" type="date" />
+          <input id="endDate" type="date" />
+          <button id="btnUpdate" class="btn">Atualizar</button>
+        </div>
+        <div class="small">Configuração: ajuste o <code>CONFIG</code> no topo do script se precisar apontar gid/colunas.</div>
+      </div>
+    </div>
+
+    <div class="grid" style="align-items:stretch">
       <!-- KPIs -->
-      <div class="card kpi" id="kpi-total">
-        <div class="title">PEÇAS AUDITADAS (total)</div>
-        <div class="value" id="total-audited">—</div>
-        <div class="small" id="breakdown-cat">Categorias: —</div>
-      </div>
-
-      <div class="card kpi" id="kpi-checked">
-        <div class="title">% AUDITADAS CONFERIDAS (Check-in)</div>
-        <div class="value" id="pct-checked">—</div>
-        <div class="small">(Peças conferidas ÷ Auditas)</div>
-      </div>
-
-      <div class="card kpi" id="kpi-defects">
-        <div class="title">% PEÇAS COM DEFEITOS</div>
-        <div class="value" id="pct-defects">—</div>
-        <div class="small">(Defeituosas ÷ Auditadas)</div>
-      </div>
-
-      <div class="card kpi" id="kpi-prod">
-        <div class="title">PRODUTIVIDADE MÉDIA (peças / h)</div>
-        <div class="value" id="prod-avg">—</div>
-        <div class="small">(Total peças ÷ total horas registradas)</div>
-      </div>
-
-      <!-- Charts -->
-      <div class="card wide">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-          <div style="font-weight:700">Distribuição por Categoria</div>
-          <div class="legend">
-            <span><i class="sw" style="background:var(--dark-blue)"></i> Calçados</span>
-            <span><i class="sw" style="background:#1f77b4"></i> Vestuário</span>
-            <span><i class="sw" style="background:var(--lime)"></i> Acessórios/Suplementos</span>
+      <div class="card col-8">
+        <h3>Principais KPIs (período selecionado)</h3>
+        <div style="display:flex;gap:18px;flex-wrap:wrap">
+          <div style="min-width:160px">
+            <div class="kpi">
+              <div>
+                <div class="value" id="kpi_pcs">--</div>
+                <div class="label">Peças Auditadas</div>
+              </div>
+            </div>
+          </div>
+          <div style="min-width:160px">
+            <div class="kpi">
+              <div>
+                <div class="value" id="kpi_pcs_h">--</div>
+                <div class="label">Peças / Hora (média)</div>
+              </div>
+            </div>
+          </div>
+          <div style="min-width:160px">
+            <div class="kpi">
+              <div>
+                <div class="value" id="kpi_nconf">--</div>
+                <div class="label">Peças Não Conformes</div>
+              </div>
+            </div>
+          </div>
+          <div style="min-width:160px">
+            <div class="kpi">
+              <div>
+                <div class="value" id="kpi_pct">--</div>
+                <div class="label">Taxa de Não Conformidade (%)</div>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="chart-wrap"><canvas id="catChart"></canvas></div>
-      </div>
 
-      <div class="card wide">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-          <div style="font-weight:700">Audited vs Checked (%)</div>
-          <div class="small">Periodo selecionado: <span id="period">—</span></div>
+        <hr style="margin:12px 0">
+
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <div style="flex:1" class="card" id="chartAreaCard">
+            <canvas id="chart_series" height="160"></canvas>
+          </div>
+
+          <div style="width:300px" class="card">
+            <h3>Top 3 Fornecedores (avarias)</h3>
+            <div id="rankList" style="margin-top:8px"></div>
+            <div style="margin-top:8px" class="small">Meta: mínimo 25% por nota | Fornecedores críticos: 40% (configurável)</div>
+          </div>
         </div>
-        <div class="chart-wrap"><canvas id="checkChart"></canvas></div>
+
       </div>
 
-      <!-- Top suppliers table -->
-      <div class="card full">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-          <div style="font-weight:700">Ranking — Top 3 Fornecedores com mais avarias</div>
-          <div class="small">Lista dos tipos de avaria mais comuns</div>
+      <!-- breakdown -->
+      <div class="card col-4 h-100">
+        <h3>Distribuição por Categoria</h3>
+        <canvas id="chart_pie" height="240"></canvas>
+        <div style="margin-top:12px">
+          <div class="small">Calçados / Vestuário / Acessórios / Suplementos</div>
         </div>
-        <table id="suppliers-table">
-          <thead><tr><th>Posição</th><th>Fornecedor</th><th>Peças Avariadas</th><th>Códigos (exemplos)</th><th>Tipos de Avaria (top)</th></tr></thead>
-          <tbody></tbody>
-        </table>
       </div>
 
-      <!-- RNC & OR/NOTAS small -->
-      <div class="card kpi">
-        <div class="title">Quantidade de OR/NOTAS para RNC (diário)</div>
-        <div class="value" id="count-or">—</div>
-        <div class="small">(contagem de OR/NOTA marcadas para RNC no período)</div>
-      </div>
-
-      <div class="card kpi">
-        <div class="title">Quantidade de RNC geradas (acumulado)</div>
-        <div class="value" id="count-rnc">—</div>
-        <div class="small">(Registros marcados como RNC)</div>
-      </div>
-
-      <div class="card wide">
-        <div style="font-weight:700;margin-bottom:8px">Tabela de avarias — visual detalhado (filtre por fornecedor)</div>
-        <div style="margin-bottom:10px;display:flex;gap:8px">
-          <select id="filter-supplier"><option value="">— Todos fornecedores —</option></select>
-          <input id="search" placeholder="buscar código / tipo" style="flex:1;padding:8px;border-radius:8px;border:1px solid #e6eef8" />
-        </div>
-        <div style="max-height:320px;overflow:auto">
-          <table id="defects-table">
-            <thead><tr><th>Data</th><th>Fornecedor</th><th>Código</th><th>Tipo Avaria</th><th>Quantidade</th><th>OR/Nota</th></tr></thead>
+      <!-- tabela de não conformes -->
+      <div class="card col-12">
+        <h3>Lista — Peças Não Conformes (amostra)</h3>
+        <div style="overflow:auto;max-height:260px">
+          <table id="table_nonconf">
+            <thead><tr><th>Data</th><th>OR</th><th>Produto</th><th>Fornecedor</th><th>Categoria</th><th>Tipo</th><th>Responsável</th><th>Qtd</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
       </div>
 
-    </section>
+      <!-- checkin por categoria -->
+      <div class="card col-6">
+        <h3>Checkin Noturno — por categoria</h3>
+        <canvas id="chart_checkin" height="180"></canvas>
+      </div>
 
-    <footer style="margin-top:18px;color:var(--muted);font-size:13px">Arquivo: <strong>index.html</strong> • Conecte sua Google Sheet e publique para web (instruções abaixo).</footer>
+      <!-- tabela resumo por dia -->
+      <div class="card col-6">
+        <h3>Resumo diário (amostra)</h3>
+        <div id="dailyTable" style="max-height:260px;overflow:auto"></div>
+      </div>
 
-    <hr style="margin-top:18px" />
-
-    <section style="margin-top:12px">
-      <h3>Instruções rápidas de implantação</h3>
-      <ol>
-        <li>Prepare a Google Sheet com uma aba chamada <code>audits</code> contendo (mínimo) as colunas: <code>date,category,quantity,checked,defect,defect_type,product_code,supplier,order_id,hours_spent,is_rnc</code> (veja explicação dentro do repositório).</li>
-        <li>Publique a planilha: Arquivo → Publicar na web → selecionar aba "audits" → publicar. Copie o <strong>Spreadsheet ID</strong> (parte da URL entre <code>/d/</code> e <code>/edit</code>) e o <strong>gid</strong> da aba.</li>
-        <li>No topo deste ficheiro (index.html), substitua as constantes <code>SPREADSHEET_ID</code> e <code>SHEET_GID</code> com os valores da sua planilha.</li>
-        <li>Faça push do projeto para o GitHub e ative o GitHub Pages nas configurações do repositório (branch main / folder root). O site ficará disponível em <code>https://<your-username>.github.io/<repo-name>/</code>.</li>
-      </ol>
-    </section>
-
-  </div>
+    </div> <!-- grid -->
+    <footer>FUTFANATICS • Dashboard Auditoria — gerado localmente no navegador</footer>
+  </div> <!-- container -->
 
 <script>
-// ============ CONFIGURAR AQUI === substituir pelos valores da sua planilha ============
-const SPREADSHEET_ID = "1RisWgpsGELH184pSKGB77axrCd7xMfVdBkeK3_HGWP0"; // insira o ID da planilha
-const SHEET_GID = "0"; // gid da aba audits
-const CSV_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=${SHEET_GID}`;
-// =======================================================================================
+/*
+  CONFIG (edite conforme suas planilhas):
+  - SHEET_BASE: URL base da planilha (entre /d/ e /edit)
+  - GIDS: gid para cada aba (você encontra no final da URL quando abre a aba)
+  - MAPEAMENTO: informe as colunas que contém os campos usados. Use o nome que tiver na sua planilha.
+  OBS: O script lê CSVs públicos. Para funcionar, a planilha deve estar "Compartilhada: qualquer pessoa com o link pode visualizar"
+*/
 
-let rawRows = [];
-
-async function fetchAndRender(){
-  if (SPREADSHEET_ID.includes('REPLACE')){
-    console.warn('SPREADSHEET_ID não configurado. Edite as constantes no topo do index.html');
-    return;
+const CONFIG = {
+  SHEET_ID: 'COLE_AQUI_O_ID_DA_PLANILHA', // OLD: "1nVsXYThcVqLzEiGiEG5QYgZXzn9pVj9S_35nwLW9Qnc"
+  GIDS: {
+    AUDIT: 0,            // aba que contém médias peças/h (colunas com Data, Peças Auditadas, Qtd. Colaboradoras, Tempo por colaborador, Peças por Hora, NOTAS)
+    NONCONF: 123456789,  // aba 'Peças Não Conformes' (defina o gid real)
+    CHECKIN: 987654321   // aba com "PEÇAS CHECKIN - NOTURNO" (defina o gid real)
+  },
+  // Mapeie aqui os headers como estão na sua planilha se forem diferentes.
+  MAP: {
+    AUDIT: {
+      date: 'Data',
+      pieces_audited: 'Peças Auditadas (dia)',
+      pieces_per_hour: 'Peças por Hora',
+      notas: 'NOTAS'
+    },
+    NONCONF: {
+      date: 'Data',
+      or: 'OR',
+      product: 'Produto',
+      supplier: 'Fornecedor',
+      category: 'Categoria',
+      defect: 'Tipo de Avaria',
+      resp: 'Responsável',
+      qty: 'Qtd.'
+    },
+    CHECKIN: {
+      header_category_cols: ['CALÇADOS','VESTUARIOS','ACESSORIOS','SUPLEMENTOS'] // nomes das colunas conforme a imagem
+    }
   }
-  document.getElementById('btn-refresh').disabled = true;
+};
+
+/* ----------------------
+   Helpers: CSV -> JSON
+   ---------------------- */
+function csvToArray(csv){
+  const lines = csv.split(/\r?\n/).filter(l=>l.trim()!=='');
+  if(lines.length===0) return [];
+  const headers = lines[0].split(',').map(h=>h.replace(/(^"|"$)/g,'').trim());
+  const rows = lines.slice(1).map(line=>{
+    // split respecting quoted commas
+    const parts = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
+    const clean = parts.map(p=>p.replace(/^"|"$/g,'').trim());
+    const obj = {};
+    headers.forEach((h,i)=>obj[h]= (clean[i] !== undefined ? clean[i] : ''));
+    return obj;
+  });
+  return rows;
+}
+
+/* ----------------------
+   Fetch CSV from Google Sheets (export?format=csv&gid=...)
+   ---------------------- */
+async function fetchSheetCsv(gid){
+  const url = `https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/export?format=csv&gid=${gid}`;
+  const res = await fetch(url);
+  if(!res.ok) throw new Error('Erro ao acessar planilha. Verifique se está pública.');
+  const text = await res.text();
+  return csvToArray(text);
+}
+
+/* ----------------------
+   UI and chart building
+   ---------------------- */
+
+let chartSeries = null, chartPie = null, chartCheckin = null;
+
+function formatNum(n){
+  if(n===null || n===undefined || n==='') return 0;
+  const v = Number(String(n).replace(/\./g,'').replace(',','.'));
+  return isNaN(v)?0:v;
+}
+
+function sum(arr){ return arr.reduce((a,b)=>a+b,0); }
+
+async function updateDashboard(){
   try{
-    const res = await fetch(CSV_URL);
-    const txt = await res.text();
-    const parsed = Papa.parse(txt, {header:true,skipEmptyLines:true});
-    rawRows = parsed.data.map(r => normalizeRow(r));
-    renderAll();
-  }catch(e){
-    console.error(e);
-    alert('Erro ao buscar a planilha. Verifique se ela foi publicada e se IDs estão corretos.');
-  }finally{document.getElementById('btn-refresh').disabled = false}
-}
+    // desabilita botão
+    document.getElementById('btnUpdate').disabled = true;
+    document.getElementById('btnUpdate').innerText = 'Carregando...';
 
-function normalizeRow(r){
-  // normaliza e converte tipos básicos
-  return {
-    date: r.date ? new Date(r.date) : null,
-    category: (r.category||'').trim(),
-    quantity: Number(r.quantity||1),
-    checked: (/^(true|1|sim|yes)$/i).test(r.checked||r.checked === true),
-    defect: (/^(true|1|sim|yes)$/i).test(r.defect||r.defect === true),
-    defect_type: (r.defect_type||'').trim(),
-    product_code: (r.product_code||'').trim(),
-    supplier: (r.supplier||'').trim(),
-    order_id: (r.order_id||'').trim(),
-    hours_spent: Number(r.hours_spent||0),
-    is_rnc: (/^(true|1|sim|yes)$/i).test(r.is_rnc||r.is_rnc === true)
+    // ler datas da UI
+    const start = document.getElementById('startDate').value;
+    const end = document.getElementById('endDate').value;
+    const dateFrom = start ? new Date(start) : null;
+    const dateTo = end ? new Date(end) : null;
+
+    // 1) AUDIT
+    const rawAudit = await fetchSheetCsv(CONFIG.GIDS.AUDIT);
+    // tenta detectar colunas mapeadas (use os nomes do MAP)
+    const mapA = CONFIG.MAP.AUDIT;
+    const auditRows = rawAudit.map(r=>{
+      return {
+        date: r[mapA.date] || r['Data'] || r['data'] || Object.values(r)[0],
+        pieces_audited: formatNum(r[mapA.pieces_audited] || r['Peças Auditadas (dia)'] || r['Peças Auditadas'] || r['Peças Confer']),
+        pieces_per_hour: formatNum(r[mapA.pieces_per_hour] || r['Peças por Hora']),
+        notas: formatNum(r[mapA.notas] || r['NOTAS'] || r['Notas'])
+      };
+    }).filter(r=>r.date);
+
+    // filtrar por período se informado
+    const filteredAudit = auditRows.filter(r=>{
+      if(!r.date) return false;
+      const d = new Date(r.date.split('/').reverse().join('-')); // tenta dd/mm/yyyy
+      if(isNaN(d)) {
+        const dd = new Date(r.date);
+        if(isNaN(dd)) return true;
+        return (!dateFrom || dd>=dateFrom) && (!dateTo || dd<=dateTo);
+      }
+      return (!dateFrom || d>=dateFrom) && (!dateTo || d<=dateTo);
+    });
+
+    // sumarizar daily series
+    const labels = filteredAudit.map(r=>r.date);
+    const seriesPieces = filteredAudit.map(r=>r.pieces_audited);
+    const seriesPph = filteredAudit.map(r=>r.pieces_per_hour);
+
+    // KPIs
+    const totalPieces = sum(seriesPieces);
+    const avgPph = seriesPph.length? (sum(seriesPph)/seriesPph.length).toFixed(1) : 0;
+
+    // 2) NONCONF
+    const rawNon = await fetchSheetCsv(CONFIG.GIDS.NONCONF);
+    const mapN = CONFIG.MAP.NONCONF;
+    const nonRows = rawNon.map(r=>({
+      date: r[mapN.date] || r['Data'],
+      or: r[mapN.or] || r['OR'],
+      product: r[mapN.product] || r['Produto'],
+      supplier: r[mapN.supplier] || r['Fornecedor'],
+      category: r[mapN.category] || r['Categoria'],
+      defect: r[mapN.defect] || r['Tipo de Avaria'],
+      resp: r[mapN.resp] || r['Responsável'],
+      qty: formatNum(r[mapN.qty] || r['Qtd.'] || r['Qtd'])
+    })).filter(x=>x.date);
+
+    // filtrar período
+    const nonFiltered = nonRows.filter(r=>{
+      const d = new Date((r.date || '').split('/').reverse().join('-'));
+      if(isNaN(d)) {
+        const dd = new Date(r.date);
+        if(isNaN(dd)) return true;
+        return (!dateFrom || dd>=dateFrom) && (!dateTo || dd<=dateTo);
+      }
+      return (!dateFrom || d>=dateFrom) && (!dateTo || d<=dateTo);
+    });
+
+    const totalNonConf = sum(nonFiltered.map(x=>x.qty));
+
+    // taxa de não conformidade = totalNonConf / totalPieces * 100
+    const pctNon = totalPieces ? ((totalNonConf/totalPieces)*100).toFixed(1) : 0;
+
+    // ranking fornecedores
+    const supplierMap = {};
+    nonFiltered.forEach(r=>{
+      const s = (r.supplier||'N/E').trim();
+      supplierMap[s] = (supplierMap[s] || 0) + (r.qty||0);
+    });
+    const ranking = Object.entries(supplierMap).sort((a,b)=>b[1]-a[1]).slice(0,10);
+
+    // 3) CHECKIN
+    const rawCheck = await fetchSheetCsv(CONFIG.GIDS.CHECKIN);
+    // espera que existam colunas com nomes indicados em CONFIG.MAP.CHECKIN.header_category_cols
+    const checkHeaders = CONFIG.MAP.CHECKIN.header_category_cols;
+    let checkSums = {};
+    rawCheck.forEach(r=>{
+      checkHeaders.forEach(h=>{
+        const val = formatNum(r[h] || r[h.toUpperCase()] || r[h.toLowerCase()]);
+        checkSums[h] = (checkSums[h] || 0) + val;
+      });
+    });
+
+    // CHARTS + UI render
+    // KPIs
+    document.getElementById('kpi_pcs').innerText = totalPieces.toLocaleString('pt-BR');
+    document.getElementById('kpi_pcs_h').innerText = Number(avgPph).toLocaleString('pt-BR');
+    document.getElementById('kpi_nconf').innerText = totalNonConf.toLocaleString('pt-BR');
+    document.getElementById('kpi_pct').innerText = pctNon + ' %';
+
+    // tabela não conformes (apenas 100 linhas)
+    const tbody = document.querySelector('#table_nonconf tbody');
+    tbody.innerHTML = '';
+    nonFiltered.slice(0,120).forEach(r=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${r.date||''}</td><td>${r.or||''}</td><td>${r.product||''}</td><td>${r.supplier||''}</td><td>${r.category||''}</td><td>${r.defect||''}</td><td>${r.resp||''}</td><td>${r.qty||''}</td>`;
+      tbody.appendChild(tr);
+    });
+
+    // ranking UI
+    const rankList = document.getElementById('rankList');
+    rankList.innerHTML = '';
+    ranking.slice(0,3).forEach((it, idx)=>{
+      const div = document.createElement('div');
+      div.className = 'rank-item';
+      div.innerHTML = `<div style="font-weight:600">${idx+1}. ${it[0]}</div><div style="font-weight:700">${it[1]}</div>`;
+      rankList.appendChild(div);
+    });
+
+    // daily summary table
+    const dailyDiv = document.getElementById('dailyTable');
+    let html = '<table><thead><tr><th>Data</th><th>Peças</th><th>Peças/H</th><th>Notas</th></tr></thead><tbody>';
+    filteredAudit.forEach(r=>{
+      html += `<tr><td>${r.date||''}</td><td>${r.pieces_audited||0}</td><td>${r.pieces_per_hour||0}</td><td>${r.notas||''}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    dailyDiv.innerHTML = html;
+
+    // Charts
+    // time series (pieces & pph)
+    const ctx = document.getElementById('chart_series').getContext('2d');
+    if(chartSeries) chartSeries.destroy();
+    chartSeries = new Chart(ctx, {
+      type:'bar',
+      data:{
+        labels: labels,
+        datasets:[
+          { type:'bar', label:'Peças Auditadas', data: seriesPieces, yAxisID:'y', backgroundColor: 'rgba(11,99,183,0.9)' },
+          { type:'line', label:'Peças / Hora', data: seriesPph, yAxisID:'y2', borderColor:'#b7f24d', backgroundColor:'#b7f24d', tension:0.2, pointRadius:3 }
+        ]
+      },
+      options:{
+        responsive:true,
+        scales:{
+          y:{ position:'left', title:{display:true,text:'Peças'} },
+          y2:{ position:'right', grid:{drawOnChartArea:false}, title:{display:true,text:'Peças / Hora'} }
+        },
+        plugins:{legend:{position:'top'}}
+      }
+    });
+
+    // pie category (from nonFiltered)
+    const catMap = {};
+    nonFiltered.forEach(r=>{
+      const c = (r.category || 'OUTROS').toString();
+      catMap[c] = (catMap[c] || 0) + (r.qty||0);
+    });
+    const pieLabels = Object.keys(catMap);
+    const pieData = pieLabels.map(k=>catMap[k]);
+    const ctx2 = document.getElementById('chart_pie').getContext('2d');
+    if(chartPie) chartPie.destroy();
+    chartPie = new Chart(ctx2, {
+      type:'doughnut',
+      data:{ labels: pieLabels, datasets:[{data:pieData}] },
+      options:{ plugins:{legend:{position:'bottom'}} }
+    });
+
+    // checkin bar
+    const ckLabels = Object.keys(checkSums);
+    const ckData = ckLabels.map(k=>checkSums[k]);
+    const ctx3 = document.getElementById('chart_checkin').getContext('2d');
+    if(chartCheckin) chartCheckin.destroy();
+    chartCheckin = new Chart(ctx3, {
+      type:'bar',
+      data:{ labels: ckLabels, datasets:[{label:'Checkin',data:ckData, backgroundColor:'rgba(5,47,95,0.9)'}] },
+      options:{ responsive:true, plugins:{legend:{display:false}} }
+    });
+
+  }catch(err){
+    alert('Erro ao atualizar dashboard: ' + err.message);
+    console.error(err);
+  }finally{
+    document.getElementById('btnUpdate').disabled = false;
+    document.getElementById('btnUpdate').innerText = 'Atualizar';
   }
 }
 
-function renderAll(){
-  const data = rawRows;
-  const totalAudited = data.reduce((s,r)=> s + (r.quantity||0),0);
-  document.getElementById('total-audited').innerText = totalAudited.toLocaleString();
+/* ----------------------
+   Inicialização: preencher datas e botão
+   ---------------------- */
+document.getElementById('btnUpdate').addEventListener('click', updateDashboard);
+// preenche último mês como padrão
+(function setDefaultDates(){
+  const today = new Date();
+  const prior = new Date(); prior.setDate(today.getDate()-7);
+  const dd = d=>String(d.getDate()).padStart(2,'0');
+  const mm = d=>String(d.getMonth()+1).padStart(2,'0');
+  document.getElementById('startDate').value = `${prior.getFullYear()}-${mm(prior)}-${dd(prior)}`;
+  document.getElementById('endDate').value = `${today.getFullYear()}-${mm(today)}-${dd(today)}`;
+})();
 
-  // breakdown por categoria
-  const categories = ['Calçados','Vestuarios','Acessorios','Suplementos'];
-  const catCounts = {};
-  categories.forEach(c=>catCounts[c]=0);
-  data.forEach(r=>{
-    const key = categories.find(c=> r.category.toLowerCase().includes(c.toLowerCase())) || r.category || 'Outros';
-    if (!catCounts[key]) catCounts[key]=0;
-    catCounts[key]+= r.quantity || 0;
-  });
-  const breakdownText = Object.entries(catCounts).map(([k,v])=> `${k}: ${v}`).join(' • ');
-  document.getElementById('breakdown-cat').innerText = breakdownText;
-
-  // checked %
-  const checkedQty = data.reduce((s,r)=> s + ((r.checked? r.quantity:0) || 0),0);
-  const pctChecked = totalAudited? Math.round(checkedQty/totalAudited*100):0;
-  document.getElementById('pct-checked').innerText = pctChecked + '%';
-
-  // defects %
-  const defectQty = data.reduce((s,r)=> s + ((r.defect? r.quantity:0) || 0),0);
-  const pctDef = totalAudited? Math.round(defectQty/totalAudited*100):0;
-  document.getElementById('pct-defects').innerText = pctDef + '%';
-
-  // produtividade média
-  const totalHours = data.reduce((s,r)=> s + (r.hours_spent||0),0);
-  const prodAvg = totalHours? (totalAudited/totalHours).toFixed(2) : '—';
-  document.getElementById('prod-avg').innerText = prodAvg;
-
-  // Period text
-  const dates = data.map(d=>d.date).filter(Boolean).sort((a,b)=>a-b);
-  if (dates.length){
-    const p = `${formatDate(dates[0])} → ${formatDate(dates[dates.length-1])}`;
-    document.getElementById('period').innerText = p;
-  }
-
-  // Categoria chart
-  const catLabels = Object.keys(catCounts);
-  const catValues = Object.values(catCounts);
-  renderPie('catChart', catLabels, catValues);
-
-  // checked chart (audited vs checked)
-  renderBar('checkChart', ['Auditadas','Conferidas'], [totalAudited, checkedQty]);
-
-  // ranking fornecedores
-  const suppliers = {};
-  data.forEach(r=>{
-    if (!r.supplier) return;
-    if (!suppliers[r.supplier]) suppliers[r.supplier] = {count:0,codes:new Set(),types:{}};
-    if (r.defect) suppliers[r.supplier].count += r.quantity||0;
-    if (r.product_code) suppliers[r.supplier].codes.add(r.product_code);
-    if (r.defect_type){ suppliers[r.supplier].types[r.defect_type] = (suppliers[r.supplier].types[r.defect_type]||0) + (r.quantity||1);} 
-  });
-  const supArr = Object.entries(suppliers).map(([k,v])=> ({supplier:k,count:v.count,codes:[...v.codes].slice(0,5),types:v.types}));
-  supArr.sort((a,b)=> b.count - a.count);
-  renderSuppliersTable(supArr.slice(0,3));
-
-  // populate suppliers filter
-  const select = document.getElementById('filter-supplier');
-  const currentOptions = new Set([...select.querySelectorAll('option')].map(o=>o.value));
-  supArr.forEach(s=>{ if (!currentOptions.has(s.supplier)){
-    const o=document.createElement('option');o.value=s.supplier;o.textContent=s.supplier;select.appendChild(o);
-  } });
-
-  // defects table (detailed list)
-  renderDefectsTable(data);
-
-  // RNC / OR counts
-  const orCount = data.reduce((s,r)=> s + (r.order_id?1:0),0); // simplificado: contar OR/NOTAS existentes
-  document.getElementById('count-or').innerText = orCount;
-  const rncCount = data.reduce((s,r)=> s + (r.is_rnc?1:0),0);
-  document.getElementById('count-rnc').innerText = rncCount;
-}
-
-function renderPie(canvasId, labels, values){
-  const ctx = document.getElementById(canvasId).getContext('2d');
-  if (window[canvasId]) window[canvasId].destroy();
-  window[canvasId] = new Chart(ctx, {
-    type:'doughnut',
-    data:{labels, datasets:[{data:values,backgroundColor:[getComputedStyle(document.documentElement).getPropertyValue('--dark-blue')||'#052a4a','#1f77b4','#a7ff3a','#8c8c8c']}]},
-    options:{plugins:{legend:{position:'bottom'}}}
-  });
-}
-
-function renderBar(canvasId, labels, values){
-  const ctx = document.getElementById(canvasId).getContext('2d');
-  if (window[canvasId]) window[canvasId].destroy();
-  window[canvasId] = new Chart(ctx, {
-    type:'bar',
-    data:{labels, datasets:[{label:'Quantidade',data:values,backgroundColor:getBarColors(values.length)}]},
-    options:{scales:{y:{beginAtZero:true}}}
-  });
-}
-
-function getBarColors(n){
-  const base = getComputedStyle(document.documentElement).getPropertyValue('--dark-blue')||'#052a4a';
-  return new Array(n).fill(base);
-}
-
-function renderSuppliersTable(list){
-  const tbody = document.querySelector('#suppliers-table tbody'); tbody.innerHTML='';
-  list.forEach((s,i)=>{
-    const tr = document.createElement('tr');
-    const typesTop = Object.entries(s.types||{}).sort((a,b)=>b[1]-a[1]).slice(0,3).map(t=>t[0]).join(', ');
-    tr.innerHTML = `<td>${i+1}</td><td class="supplier-bad">${s.supplier}</td><td>${s.count}</td><td>${s.codes.join(', ')}</td><td>${typesTop}</td>`;
-    tbody.appendChild(tr);
-  });
-}
-
-function renderDefectsTable(data){
-  const tbody = document.querySelector('#defects-table tbody'); tbody.innerHTML='';
-  const filter = document.getElementById('filter-supplier').value.toLowerCase();
-  const search = document.getElementById('search').value.toLowerCase();
-  const rows = data.filter(r=> r.defect).filter(r=> !filter || r.supplier.toLowerCase() === filter).filter(r=> !search || (r.product_code||'').toLowerCase().includes(search) || (r.defect_type||'').toLowerCase().includes(search));
-  rows.forEach(r=>{
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${r.date?formatDate(r.date):''}</td><td>${r.supplier}</td><td>${r.product_code}</td><td>${r.defect_type}</td><td>${r.quantity}</td><td>${r.order_id||''}</td>`;
-    tbody.appendChild(tr);
-  });
-}
-
-function formatDate(d){ if (!d) return ''; const dd = (`0${d.getDate()}`).slice(-2); const mm = (`0${d.getMonth()+1}`).slice(-2); return `${dd}/${mm}/${d.getFullYear()}` }
-
-// event listeners
-document.getElementById('btn-refresh').addEventListener('click', fetchAndRender);
-document.getElementById('filter-supplier').addEventListener('change', ()=> renderDefectsTable(rawRows));
-document.getElementById('search').addEventListener('input', ()=> renderDefectsTable(rawRows));
-
-// auto refresh every 5 minutes
-setInterval(()=>{ fetchAndRender(); }, 1000 * 60 * 5);
-// initial
-fetchAndRender();
 </script>
 </body>
 </html>
-
