@@ -23,7 +23,7 @@
   header{background:linear-gradient(90deg,var(--blue-dark),#0b4f8f);color:white;padding:18px 24px;display:flex;align-items:center;gap:16px}
   header h1{margin:0;font-size:20px}
   .container{max-width:1200px;margin:22px auto;padding:0 16px;}
-  .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
+  .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px} /* ESSA LINHA FOI RESTAURADA */
   .card{background:var(--bg);border-radius:10px;box-shadow:0 6px 18px rgba(9,30,66,.06);padding:14px}
   .card.h-100{display:flex;flex-direction:column;justify-content:space-between;height:100%}
   .kpi{display:flex;gap:12px;align-items:center}
@@ -354,7 +354,11 @@ async function updateDashboard(){
     
     const distinctOrs = Object.values(orsWithNonConf);
     // Ordena por data (inversa para os mais recentes primeiro)
-    distinctOrs.sort((a, b) => new Date(b.date.split('/').reverse().join('-')) - new Date(a.date.split('/').reverse().join('-')));
+    distinctOrs.sort((a, b) => {
+      const d1 = new Date(b.date.split('/').reverse().join('-'));
+      const d2 = new Date(a.date.split('/').reverse().join('-'));
+      return isNaN(d1) || isNaN(d2) ? 0 : d1 - d2;
+    });
 
 
     // 3) CHECKIN
@@ -435,7 +439,7 @@ async function updateDashboard(){
     nonFiltered.forEach(r=>{
       // Garante que a categoria não é vazia
       const c = (r.category || 'OUTROS').toString().toUpperCase().trim();
-      catMap[c] = (catMap[c] || 0) + (r.qty||0);
+      catMap[c] = (catMap[c] || 0) + (r.qty||0); // SOMA A QUANTIDADE
     });
     
     const pieLabels = Object.keys(catMap).filter(k=>catMap[k]>0); // Remove categorias com zero
