@@ -266,7 +266,7 @@ function computeKpis(auditRows, checkinRows, ncrRows){
 
 /* Render UI */
 function renderKpis(k){
-  document.getElementById('kpi-pecas').innerText = k.totalAuditadas;
+  document.getElementById('kpi-pecas').innerText = (typeof k.totalAuditadas === 'number') ? k.totalAuditadas.toLocaleString('pt-BR') : k.totalAuditadas;
   document.getElementById('kpi-hh').innerText = k.mediaPhh ? k.mediaPhh.toFixed(1) : '--';
   document.getElementById('rnc-num').innerText = k.rncSum;
   document.getElementById('fotos-num').innerText = k.fotosSum;
