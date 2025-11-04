@@ -222,7 +222,7 @@ function computeKpis(auditRows, checkinRows, ncrRows){
   // checkin totals (espera 1 linha)
   const checkin = checkinRows.length>0 ? checkinRows[0] : {};
   const toNumber = v => { if(v===undefined || v===null || v==="") return 0; return Number(String(v).replace(",",".").replace(/\s/g,'')) || 0; };
-  const totalConferidas = toNumber(checkin["PEÇAS CONFERIDAS TOTAL"] || checkin["PEÇAS CONFERIDAS TOTAL".trim()]);
+  const totalConferidas = toNumber(checkin["CONFERIDAS"] || checkin["PCONFERIDAS".trim()]);
   const check_categories = {
     CALÇADOS: toNumber(checkin["CALÇADOS"]),
     VESTUARIOS: toNumber(checkin["VESTUARIOS"]),
