@@ -219,16 +219,34 @@ function computeKpis(auditRows, checkinRows, ncrRows){
     if(r[COLMAP.audit_date]) datas.push(r[COLMAP.audit_date]);
   });
 
-  // checkin totals (espera 1 linha)
-  const checkin = checkinRows.length>0 ? checkinRows[0] : {};
-  const toNumber = v => { if(v===undefined || v===null || v==="") return 0; return Number(String(v).replace(",",".").replace(/\s/g,'')) || 0; };
-  const totalConferidas = toNumber(checkin["CONFERIDAS"] || checkin["PCONFERIDAS".trim()]);
-  const check_categories = {
-    CALÇADOS: toNumber(checkin["CALÇADOS"]),
-    VESTUARIOS: toNumber(checkin["VESTUARIOS"]),
-    ACESSORIOS: toNumber(checkin["ACESSORIOS"]),
-    SUPLEMENTOS: toNumber(checkin["SUPLEMENTOS"])
-  };
+ // AJUSTE FUT 02 - agregação diária de Check-in e categorias
+const toNumber = v => { if(v===undefined || v===null || v==="") return 0; return Number(String(v).replace(",",".").replace(/\s/g,'')) || 0; };
+
+// Agregar checkinRows por Data (mesmo padrão da aba audit)
+const checkByDate = {};
+checkinRows.forEach(r => {
+  const d = r["Data"] || r["data"] || r["DATA"] || '';
+  if(!d) return;
+  if(!checkByDate[d]) checkByDate[d] = { total:0, CALÇADOS:0, VESTUARIOS:0, ACESSORIOS:0, SUPLEMENTOS:0 };
+  // Suporta tanto "CONFERIDAS TOTAL" quanto "CONFERIDAS" (nome variant)
+  const totalField = r["CONFERIDAS TOTAL"] ?? r["CONFERIDAS"] ?? r["PCONFERIDAS"] ?? '0';
+  checkByDate[d].total += toNumber(totalField);
+  checkByDate[d].CALÇADOS += toNumber(r["CALÇADOS"] || r["CALÇADO"] || 0);
+  checkByDate[d].VESTUARIOS += toNumber(r["VESTUARIOS"] || r["VESTUARIO"] || 0);
+  checkByDate[d].ACESSORIOS += toNumber(r["ACESSORIOS"] || r["ACESSORIO"] || 0);
+  checkByDate[d].SUPLEMENTOS += toNumber(r["SUPLEMENTOS"] || r["SUPLEMENTO"] || 0);
+});
+
+// Totais do período (soma de todos os dias)
+let totalConferidas = 0;
+const check_categories = { CALÇADOS:0, VESTUARIOS:0, ACESSORIOS:0, SUPLEMENTOS:0 };
+Object.values(checkByDate).forEach(v=>{
+  totalConferidas += v.total;
+  check_categories.CALÇADOS += v.CALÇADOS;
+  check_categories.VESTUARIOS += v.VESTUARIOS;
+  check_categories.ACESSORIOS += v.ACESSORIOS;
+  check_categories.SUPLEMENTOS += v.SUPLEMENTOS;
+});
 
   // ncr aggregation
   const fornecedores = {};
