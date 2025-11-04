@@ -330,53 +330,40 @@ function renderKpis(k){
 let chartCheckin = null;
 let chartCats = null;
 function drawCharts(k, auditRows, checkinRows, ncrRows){
-   const toNum = v => Number(String(v || "0").replace(",", ".").trim()) || 0;
+// === AJUSTE: detecção flexível de cabeçalhos na aba Checkin ===
+const detectField = (rowObj, patterns) => {
+  if(!rowObj) return null;
+  const keys = Object.keys(rowObj);
+  for(const p of patterns){
+    const rx = new RegExp(p, 'i');
+    const found = keys.find(k => rx.test(k));
+    if(found) return found;
+  }
+  return null;
+};
 
-  // === AGRUPAR AUDITADAS POR DIA ===
-  const auditByDate = {};
-  auditRows.forEach(r => {
-    const d = r["Data"];
-    if (!d) return;
-    if (!auditByDate[d]) auditByDate[d] = { auditadas: 0, hh: 0 };
-    auditByDate[d].auditadas += toNum(r["Peças Auditadas (dia) TOTAL"]);
-    auditByDate[d].hh += toNum(r["Peças por Hora"]);
-  });
+// detecta os nomes reais das colunas na primeira linha (se existir)
+const sampleCheck = checkinRows.length > 0 ? checkinRows[0] : null;
+const check_date_field = detectField(sampleCheck, ['^data$','data','^date$','^dia$']);
+const check_total_field = detectField(sampleCheck, ['CONFERIDAS TOTAL','CONFERIDAS','PCONFERIDAS','PEÇAS CONFERIDAS','PCONFERIDAS TOTAL','CONFERIDAS_TOTAL']);
+const check_cald_field = detectField(sampleCheck, ['CALÇADOS','CALÇADO']);
+const check_vest_field = detectField(sampleCheck, ['VESTUARIOS','VESTUARIO','VEST']);
+const check_acess_field = detectField(sampleCheck, ['ACESSORIOS','ACESSORIO','ACESS']);
+const check_supl_field = detectField(sampleCheck, ['SUPLEMENTOS','SUPLEMENTO','SUPL']);
 
-  // === AGRUPAR CONFERIDAS POR DIA ===
-  const checkByDate = {};
-  checkinRows.forEach(r => {
-    const d = r["Data"];
-    if (!d) return;
-    if (!checkByDate[d]) checkByDate[d] = { conferidas: 0 };
-    const total = r["CONFERIDAS TOTAL"] ?? r["CONFERIDAS"] ?? 0;
-    checkByDate[d].conferidas += toNum(total);
-  });
+const checkByDate = {};
+checkinRows.forEach(r => {
+  const d = r[check_date_field] || r['Data'] || r['data'] || r['DATA'] || '';
+  if(!d) return;
+  if(!checkByDate[d]) checkByDate[d] = { total:0, CALÇADOS:0, VESTUARIOS:0, ACESSORIOS:0, SUPLEMENTOS:0 };
+  const totalFieldVal = check_total_field ? r[check_total_field] : (r['CONFERIDAS TOTAL'] ?? r['CONFERIDAS'] ?? 0);
+  checkByDate[d].total += toNumber(totalFieldVal);
+  checkByDate[d].CALÇADOS += toNumber(check_cald_field ? r[check_cald_field] : (r['CALÇADOS']||r['CALÇADO']||0));
+  checkByDate[d].VESTUARIOS += toNumber(check_vest_field ? r[check_vest_field] : (r['VESTUARIOS']||r['VESTUARIO']||0));
+  checkByDate[d].ACESSORIOS += toNumber(check_acess_field ? r[check_acess_field] : (r['ACESSORIOS']||r['ACESSORIO']||0));
+  checkByDate[d].SUPLEMENTOS += toNumber(check_supl_field ? r[check_supl_field] : (r['SUPLEMENTOS']||r['SUPLEMENTO']||0));
+});
 
-  // === JUNTAR TODAS AS DATAS ===
-  const allDates = Array.from(new Set([...Object.keys(auditByDate), ...Object.keys(checkByDate)])).sort();
-
-  const labels = [];
-  const conferidasData = [];
-  const auditadasData = [];
-  const hhData = [];
-  const below25Points = [];
-
-  allDates.forEach(date => {
-    const auditadas = auditByDate[date]?.auditadas || 0;
-    const conferidas = checkByDate[date]?.conferidas || 0;
-    const hh = auditByDate[date]?.hh || 0;
-    const pct = conferidas > 0 ? (auditadas / conferidas) * 100 : 0;
-    const belowMeta = pct < 25;
-
-    labels.push(date);
-    conferidasData.push(conferidas);
-    auditadasData.push(auditadas);
-    hhData.push(hh);
-    if (belowMeta) below25Points.push({ x: date, y: auditadas });
-
-    // 🔎 DEBUG — mostra cálculos no console (pode remover depois)
-    console.log(`📅 ${date} → Conferidas: ${conferidas} | Auditadas: ${auditadas} | %: ${pct.toFixed(1)}${belowMeta ? " ⚠️ abaixo 25%" : ""}`);
-  });
 
   // === GRÁFICO PRINCIPAL ===
   const ctx = document.getElementById("chart-checkin").getContext("2d");
