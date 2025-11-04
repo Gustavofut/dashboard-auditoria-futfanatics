@@ -329,98 +329,20 @@ function renderKpis(k){
 /* Desenhar gráficos */
 let chartCheckin = null;
 let chartCats = null;
-// AJUSTE FUT FINAL - Corrige gráfico diário de conferidas x auditadas + meta 25%
-function drawCharts(k, auditRows, checkinRows) {
-  const toNum = v => Number(String(v || "0").replace(",", ".").trim()) || 0;
-
-  // === AGRUPA AUDITADAS POR DATA ===
-  const auditByDate = {};
-  auditRows.forEach(r => {
-    const d = r["Data"];
-    if (!d) return;
-    if (!auditByDate[d]) auditByDate[d] = { auditadas: 0, hh: 0 };
-    auditByDate[d].auditadas += toNum(r["Peças Auditadas (dia) TOTAL"]);
-    auditByDate[d].hh += toNum(r["Peças por Hora"]);
-  });
-
-  // === AGRUPA CONFERIDAS POR DATA ===
-  const checkByDate = {};
-  checkinRows.forEach(r => {
-    const d = r["Data"];
-    if (!d) return;
-    if (!checkByDate[d]) checkByDate[d] = { conferidas: 0 };
-    // pega campo "CONFERIDAS TOTAL" ou "CONFERIDAS"
-    const totalConf = r["CONFERIDAS TOTAL"] ?? r["CONFERIDAS"] ?? 0;
-    checkByDate[d].conferidas += toNum(totalConf);
-  });
-
-  // === UNIFICA AS DATAS ===
-  const allDates = Array.from(new Set([...Object.keys(auditByDate), ...Object.keys(checkByDate)])).sort();
-
-  // === MONTA OS ARRAYS PARA O GRÁFICO ===
-  const labels = [];
-  const auditData = [];
-  const checkData = [];
-  const hhData = [];
-  const below25 = [];
-
-  allDates.forEach(date => {
-    const auditadas = auditByDate[date]?.auditadas || 0;
-    const conferidas = checkByDate[date]?.conferidas || 0;
-    const hh = auditByDate[date]?.hh || 0;
-    const pct = conferidas > 0 ? (auditadas / conferidas) * 100 : 0;
-    const belowMeta = pct < 25;
-
-    labels.push(date);
-    auditData.push(auditadas);
-    checkData.push(conferidas);
-    hhData.push(hh);
-    if (belowMeta) {
-      below25.push({ x: date, y: auditadas }); // marca ponto vermelho no gráfico
-    }
-  });
-
-  // === CRIA O GRÁFICO ===
-  const ctx = document.getElementById('chart-checkin').getContext('2d');
-  if (window.chartCheckin) window.chartCheckin.destroy();
-
-  window.chartCheckin = new Chart(ctx, {
-    data: {
-      labels,
-      datasets: [
-        { type: 'bar', label: 'Conferidas', data: checkData, backgroundColor: '#1976d2' },
-        { type: 'bar', label: 'Auditadas', data: auditData, backgroundColor: '#0b5f3a' },
-        {
-          type: 'line', label: 'Média Pçs H/H', data: hhData,
-          borderColor: '#FFD700', backgroundColor: '#FFD700',
-          borderWidth: 2, tension: 0.25, yAxisID: 'y1', pointRadius: 4
-        },
-        {
-          type: 'scatter', label: 'Dias < 25%',
-          data: below25,
-          pointBackgroundColor: '#FF0000',
-          pointBorderColor: '#FF0000',
-          pointRadius: 6, showLine: false
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      interaction: { mode: 'index' },
-      scales: {
-        y: { beginAtZero: true, title: { display: true, text: 'Peças (Qtd)' } },
-        y1: { beginAtZero: true, position: 'right', grid: { display: false }, title: { display: true, text: 'Peças H/H' } }
-      },
-      plugins: { legend: { position: 'top' } }
-    }
-  });
-
-  // === NOTA META ===
-  const abaixo = below25.length;
-  document.getElementById('meta-note').innerText =
-    `Meta mínima 25%: ${abaixo > 0 ? abaixo + ' dias abaixo da meta' : 'Todas as metas atingidas ✅'}`;
-}
-);
+function drawCharts(k, auditRows, checkinRows, ncrRows){
+  // Chart 1: barras conferidas vs auditadas (aqui assumimos dados por dia — se tiver vários dias no sheet, adapte)
+  // Para exemplo simples: usaremos um único ponto (o total). Se tiver vários dias (múltiplas linhas em auditRows), monte arrays por data.
+  // Vamos checar se auditRows possuem várias linhas com 'Data' diferentes
+  const dates = auditRows.map(r=>r["Data"] || r["data"] || r["DATA"]).filter(Boolean);
+  if(dates.length > 1){
+    // montar série por data
+    const byDate = {};
+    auditRows.forEach(r=>{
+      const d = (r["Data"]||r["DATA"]||r["data"]) || 'sem-data';
+      byDate[d] = byDate[d] || {audit:0, ph:0};
+      byDate[d].audit += Number(r[COLMAP.audit_total] || 0);
+      byDate[d].ph += Number(r[COLMAP.audit_phh] || 0);
+    });
     const labels = Object.keys(byDate);
     const auditData = labels.map(l=>byDate[l].audit);
     const phData = labels.map(l=> (byDate[l].ph) );
