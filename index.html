@@ -345,7 +345,31 @@ function drawCharts(k, auditRows, checkinRows, ncrRows){
     });
     const labels = Object.keys(byDate);
     const auditData = labels.map(l=>byDate[l].audit);
-    const phData = labels.map(l=> (byDate[l].ph) );
+    // Monta médias H/H por dia a partir da planilha de auditoria
+const byDate = {};
+auditRows.forEach(r => {
+  const d = (r["Data"] || r["DATA"] || r["data"]) || 'sem-data';
+  const totalAudit = Number(r[COLMAP.audit_total] || 0);
+  const hh = Number(r["Peças por Hora"] || r["Peças por hora"] || r["PEÇAS POR HORA"] || 0);
+  if (!byDate[d]) byDate[d] = { audit: 0, ph: 0 };
+  byDate[d].audit += totalAudit;
+  byDate[d].ph = hh; // valor diário da coluna I
+});
+
+// Alinha as listas ao eixo X (datas)
+const labels = Object.keys(byDate);
+const auditData = labels.map(l => byDate[l].audit);
+const phData = labels.map(l => byDate[l].ph);
+
+// Monta conferidas reais (aba Check-in)
+const checkByDate = {};
+checkinRows.forEach(r => {
+  const d = r["Data"] || r["data"] || r["DATA"];
+  if (!d) return;
+  const val = Number(r["CONFERIDAS"] || r["CONFERIDAS TOTAL"] || 0);
+  checkByDate[d] = (checkByDate[d] || 0) + val;
+});
+const checkinData = labels.map(l => checkByDate[l] || 0);
     // checkin: if checkinRows contain daily breakdown, adapt; else create single point (total)
    const checkByDate = {};
 checkinRows.forEach(r => {
