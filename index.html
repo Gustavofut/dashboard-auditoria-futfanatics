@@ -23,9 +23,9 @@
     header h1{margin:0;font-size:20px;color:var(--navy);}
     .grid{
       display:grid;
-      grid-template-columns: 320px 1fr 420px;
+      grid-template-columns: 320px 1fr 420px; /* Mantém as 3 colunas */
       gap:18px;
-      align-items:start;
+      align-items:start; /* Garante que as colunas comecem no topo */
     }
 
     /* Left column (cards) */
@@ -48,7 +48,7 @@
     footer{margin-top:18px;font-size:12px;color:#666}
     /* responsive */
     @media (max-width:1100px){
-      .grid{grid-template-columns:1fr; }
+      .grid{grid-template-columns:1fr; } /* Em telas menores, passa para 1 coluna */
     }
   </style>
 </head>
@@ -88,7 +88,6 @@
         <div style="margin-top:12px" class="small-title">Tipos de Avaria mais frequentes</div>
         <div id="tipos-list"></div>
       </div>
-
     </div>
 
         <div class="col-center">
@@ -116,7 +115,6 @@
           <div style="font-size:20px;font-weight:600;color:#444;margin-top:6px"><span id="fotos-num">--</span> Fotos</div>
         </div>
       </div>
-
     </div>
 
         <div class="col-right">
@@ -126,7 +124,7 @@
         <div style="font-size:13px;color:#666"></div>
       </div>
       
-            <div class="card">
+      <div class="card">
         <div class="small-title">Produtividade Média (Pçs Auditadas/Colaborador)</div>
         <div style="font-size:36px;font-weight:800;color:var(--navy)" id="kpi-prod-colab">--</div>
         <div style="font-size:13px;color:#666">média das peças auditadas por colaborador no dia</div>
@@ -223,7 +221,7 @@ function computeKpis(auditRows, checkinRows, ncrRows){
     fotosSum += toNumber(r[COLMAP.audit_fotos]);
     if(r[COLMAP.audit_date]) datas.push(r[COLMAP.audit_date]);
 
-    // NOVO: Produtividade diária (baseado nas colunas G e B)
+    // NOVO: Produtividade diária (baseado nas colunas G e B da Aba 1)
     const colaboradores = toNumber(r["Qtd. Colaboradoras"]);
     const pecasDia = toNumber(r[COLMAP.audit_total]);
     if(colaboradores > 0 && pecasDia > 0){
@@ -232,7 +230,7 @@ function computeKpis(auditRows, checkinRows, ncrRows){
     }
   });
 
- // AJUSTE FUT 02 - agregação diária de Check-in e categorias
+// AJUSTE FUT 02 - agregação diária de Check-in e categorias
 // O toNumber já está definido acima, mas pode ser repetido por segurança
 // const toNumber = v => { if(v===undefined || v===null || v==="") return 0; return Number(String(v).replace(",",".").replace(/\s/g,'')) || 0; }; 
 
@@ -243,7 +241,7 @@ checkinRows.forEach(r => {
   if(!d) return;
   if(!checkByDate[d]) checkByDate[d] = { total:0, CALÇADOS:0, VESTUARIOS:0, ACESSORIOS:0, SUPLEMENTOS:0 };
   // Suporta tanto "CONFERIDAS TOTAL" quanto "CONFERIDAS" (nome variant)
-  const totalField = r["CONFERIDAS"] ?? r["PCONFERIDAS"] ?? r["CONFERIDAS TOTAL"] ?? '0'; // Prioriza a coluna 'CONFERIDAS' (col B)
+  const totalField = r["CONFERIDAS"] ?? r["PCONFERIDAS"] ?? r["CONFERIDAS TOTAL"] ?? '0'; // Prioriza a coluna 'CONFERIDAS' (col B da Aba 2)
   checkByDate[d].total += toNumber(totalField);
   checkByDate[d].CALÇADOS += toNumber(r["CALÇADOS"] || r["CALÇADO"] || 0);
   checkByDate[d].VESTUARIOS += toNumber(r["VESTUARIOS"] || r["VESTUARIO"] || 0);
@@ -254,230 +252,4 @@ checkinRows.forEach(r => {
 // Totais do período (soma de todos os dias)
 let totalConferidas = 0;
 const check_categories = { CALÇADOS:0, VESTUARIOS:0, ACESSORIOS:0, SUPLEMENTOS:0 };
-Object.values(checkByDate).forEach(v=>{
-  totalConferidas += v.total;
-  check_categories.CALÇADOS += v.CALÇADOS;
-  check_categories.VESTUARIOS += v.VESTUARIOS;
-  check_categories.ACESSORIOS += v.ACESSORIOS;
-  check_categories.SUPLEMENTOS += v.SUPLEMENTOS;
-});
-
-  // ncr aggregation
-  const fornecedores = {};
-  const tipos = {};
-  let totalAvariados = 0;
-  ncrRows.forEach(r=>{
-    const qtd = toNumber(r["QNTD"]);
-    const f = r["FORNECEDOR"] || "SEM FORNECEDOR";
-    const t = r["TIPO DE AVARIA"] || "OUTRO";
-    fornecedores[f] = (fornecedores[f]||0) + qtd;
-    tipos[t] = (tipos[t]||0) + qtd;
-    totalAvariados += qtd;
-  });
-
-  const taxaNaoConformidade = totalAuditadas>0 ? totalAvariados/totalAuditadas : 0;
-  const mediaPhh = phhList.length>0 ? phhList.reduce((a,b)=>a+b,0)/phhList.length : 0;
-  const pctAuditadoSobreConferido = totalConferidas>0 ? (totalAuditadas / totalConferidas) : 0;
-  // NOVO: Produtividade média do período
-  const mediaPecasColaborador = diasComProdutividade > 0 ? totalPecasColaborador / diasComProdutividade : 0;
-
-  return {
-    period: {min: datas.length?datas[0]:null, max: datas.length?datas[datas.length-1]:null},
-    totalAuditadas,
-    categoriesAudit,
-    mediaPhh,
-    totalConferidas,
-    check_categories,
-    totalAvariados,
-    taxaNaoConformidade,
-    rncSum,
-    fotosSum,
-    fornecedores,
-    tipos,
-    pctAuditadoSobreConferido,
-    checkByDate, // Adicionado para uso no gráfico
-    mediaPecasColaborador // Adicionado
-  };
-}
-
-/* Render UI */
-function renderKpis(k){
-  document.getElementById('kpi-pecas').innerText = (typeof k.totalAuditadas === 'number') ? k.totalAuditadas.toLocaleString('pt-BR') : k.totalAuditadas;
-  document.getElementById('kpi-hh').innerText = k.mediaPhh ? k.mediaPhh.toFixed(1) : '--';
-  document.getElementById('rnc-num').innerText = k.rncSum;
-  document.getElementById('fotos-num').innerText = k.fotosSum;
-  document.getElementById('sum-conferidas').innerText = k.totalConferidas.toLocaleString('pt-BR');
-  document.getElementById('sum-auditadas').innerText = k.totalAuditadas.toLocaleString('pt-BR');
-  document.getElementById('pct-auditado').innerText = k.pctAuditadoSobreConferido ? (k.pctAuditadoSobreConferido*100).toFixed(1)+'%' : '--';
-  document.getElementById('kpi-taxa').innerText = k.taxaNaoConformidade ? (k.taxaNaoConformidade*100).toFixed(1)+'%' : '--';
-  document.getElementById('kpi-taxa-qnt').innerText = k.totalAvariados ? `${k.totalAvariados} peças` : '';
-  // NOVO KPI: Produtividade Colaborador
-  document.getElementById('kpi-prod-colab').innerText = k.mediaPecasColaborador ? k.mediaPecasColaborador.toFixed(1) : '--';
-
-  // categories list
-  const catDiv = document.getElementById('categoria-list'); catDiv.innerHTML='';
-  ['CALÇADOS','VESTUARIOS','ACESSORIOS','SUPLEMENTOS'].forEach(cat=>{
-    const el = document.createElement('div'); el.className='mini-item';
-    el.innerHTML = `<div style="font-weight:600">${cat}</div><div>${k.categoriesAudit[cat]||0}</div>`;
-    catDiv.appendChild(el);
-  });
-
-  // fornecedores top3
-  const fornArr = Object.entries(k.fornecedores || {}).sort((a,b)=>b[1]-a[1]).slice(0,3);
-  const fornDiv = document.getElementById('fornecedores-list'); fornDiv.innerHTML='';
-  fornArr.forEach((f,i)=>{
-    const row = document.createElement('div'); row.style.display='flex'; row.style.justifyContent='space-between'; row.style.padding='6px 0';
-    row.innerHTML = `<div>${i+1}º - ${f[0]}</div><div style="font-weight:700">${f[1]}</div>`;
-    fornDiv.appendChild(row);
-  });
-
-  // tipos de avaria
-  const tiposArr = Object.entries(k.tipos || {}).sort((a,b)=>b[1]-a[1]).slice(0,6);
-  const tiposDiv = document.getElementById('tipos-list'); tiposDiv.innerHTML='';
-  tiposArr.forEach(t=>{
-    const r = document.createElement('div'); r.style.display='flex'; r.style.justifyContent='space-between'; r.style.padding='4px 0';
-    r.innerHTML = `<div>${t[0]}</div><div>${t[1]}</div>`;
-    tiposDiv.appendChild(r);
-  });
-
-  // period
-  const pText = (k.period.min && k.period.max) ? `${k.period.min} → ${k.period.max}` : '--';
-  document.getElementById('periodo-text').innerText = pText;
-  // meta note (show days below 25% inspection goal)
-  document.getElementById('meta-note').innerText = `Meta mínima de inspeção diária: 25% - o percentual auditado por dia pode ser visto no tooltip.`;
-}
-
-/* Desenhar gráficos */
-let chartCheckin = null;
-let chartCats = null;
-function drawCharts(k, auditRows, checkinRows, ncrRows){
-  // Chart 1: barras conferidas vs auditadas (ajustado para usar dados diários de checkin)
-  const dates = auditRows.map(r=>r["Data"] || r["data"] || r["DATA"]).filter(Boolean);
-  const toNumber = v => Number(v || 0); 
-  
-  if(dates.length > 1){
-    // montar série por data
-    const byDate = {};
-    auditRows.forEach(r=>{
-      const d = (r["Data"]||r["DATA"]||r["data"]) || 'sem-data';
-      byDate[d] = byDate[d] || {audit:0, ph:0};
-      byDate[d].audit += toNumber(r[COLMAP.audit_total] || 0);
-      byDate[d].ph += toNumber(r[COLMAP.audit_phh] || 0);
-    });
-    const labels = Object.keys(byDate).sort();
-    const auditData = labels.map(l=>byDate[l].audit);
-    const phData = labels.map(l=> (byDate[l].ph) );
-    // NOVO CÁLCULO: usando os dados diários reais de checkByDate
-    const checkinData = labels.map(l=> k.checkByDate[l]?.total || 0 ); 
-    
-    // draw
-    const ctx = document.getElementById('chart-checkin').getContext('2d');
-    if(chartCheckin) chartCheckin.destroy();
-    chartCheckin = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [
-          { label:'Conferidas', data: checkinData, backgroundColor:'#1976d2', stack:'A' },
-          { label:'Auditadas', data: auditData, backgroundColor:'#0b5f3a', stack:'A' },
-          { label:'Média Pçs H/H', data: phData, type:'line', borderColor:'gold', tension:0.3, pointRadius:3, yAxisID:'y1' }
-        ]
-      },
-      options: { 
-        responsive:true, 
-        plugins:{
-          legend:{position:'top'},
-          tooltip:{
-            callbacks: {
-              // Adiciona o % Auditado sobre Conferido no tooltip
-              afterBody: function(context){
-                const index = context[0].dataIndex;
-                const audit = auditData[index] || 0;
-                const check = checkinData[index] || 0;
-                if(check > 0){
-                  const pct = (audit/check * 100).toFixed(1);
-                  return `\n% Auditado: ${pct}%`;
-                }
-                return '\n% Auditado: N/A';
-              }
-            }
-          }
-        },
-        scales: {
-          y: { beginAtZero:true, position:'left' }, // Eixo para as quantidades de peças (barras)
-          y1: { beginAtZero:true, position:'right', grid:{display:false} } // Eixo para Pçs H/H (linha)
-        }
-      }
-    });
-  } else {
-    // single point: mostrar em barras apenas 1 coluna comparativa
-    const labels = [ 'Período' ];
-    const auditData = [ k.totalAuditadas ];
-    const checkData = [ k.totalConferidas ];
-    const phData = [ k.mediaPhh ];
-    const ctx = document.getElementById('chart-checkin').getContext('2d');
-    if(chartCheckin) chartCheckin.destroy();
-    chartCheckin = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [
-          { label:'Conferidas', data: checkData, backgroundColor:'#1976d2' },
-          { label:'Auditadas', data: auditData, backgroundColor:'#0b5f3a' },
-          { label:'Média Pçs H/H', data: phData, type:'line', borderColor:'gold', tension:0.3, pointRadius:6, yAxisID:'y1' }
-        ]
-      },
-      options: {
-        responsive:true,
-        scales: {
-          y: { beginAtZero:true, position:'left' },
-          y1: { beginAtZero:true, position:'right', grid:{display:false} }
-        }
-      }
-    });
-  }
-
-  // Chart 2: categorias (checkin)
-  const catLabels = ['CALÇADOS','VESTUARIOS','ACESSORIOS','SUPLEMENTOS'];
-  const catData = catLabels.map(c=>k.check_categories[c] || 0);
-  const ctx2 = document.getElementById('chart-categories').getContext('2d');
-  if(chartCats) chartCats.destroy();
-  chartCats = new Chart(ctx2, {
-    type:'bar',
-    data: { labels: catLabels, datasets: [{ label:'Check-in por categoria', data: catData, backgroundColor:'#8b0000' }] },
-    options: { responsive:true, plugins:{legend:{display:false}} }
-  });
-}
-
-/* MAIN */
-async function init(){
-  if(!SHEET_ID || SHEET_ID.includes("COLE_AQUI")){
-    document.body.innerHTML = "<div style='padding:40px;font-size:18px;color:#900'>Cole o ID da planilha (SHEET_ID) no código antes de usar. Veja instruções no topo do arquivo.</div>";
-    return;
-  }
-
-  try{
-    const urlAudit = gsheetCsvUrl(SHEET_NAMES.audit);
-    const urlCheckin = gsheetCsvUrl(SHEET_NAMES.checkin);
-    const urlNcr = gsheetCsvUrl(SHEET_NAMES.ncr);
-
-    const [auditRows, checkinRows, ncrRows] = await Promise.all([
-      fetchCsvAsJson(urlAudit),
-      fetchCsvAsJson(urlCheckin),
-      fetchCsvAsJson(urlNcr)
-    ]);
-
-    const k = computeKpis(auditRows, checkinRows, ncrRows);
-    renderKpis(k);
-    drawCharts(k, auditRows, checkinRows, ncrRows);
-
-  } catch(err){
-    console.error(err);
-    document.body.insertAdjacentHTML('beforeend', `<div style="margin-top:16px;color:#900">Erro ao carregar dados: ${err.message || err}</div>`);
-  }
-}
-
-init();
-</script>
-</body>
-</html>
+Object.values(check
