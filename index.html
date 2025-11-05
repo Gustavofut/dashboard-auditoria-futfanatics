@@ -23,9 +23,9 @@
     header h1{margin:0;font-size:20px;color:var(--navy);}
     .grid{
       display:grid;
-      grid-template-columns: 320px 1fr 420px;
+      grid-template-columns: 320px 1fr 420px; /* Mantém as 3 colunas */
       gap:18px;
-      align-items:start;
+      align-items:start; /* Garante que as colunas comecem no topo */
     }
 
     /* Left column (cards) */
@@ -48,7 +48,7 @@
     footer{margin-top:18px;font-size:12px;color:#666}
     /* responsive */
     @media (max-width:1100px){
-      .grid{grid-template-columns:1fr; }
+      .grid{grid-template-columns:1fr; } /* Em telas menores, passa para 1 coluna */
     }
   </style>
 </head>
@@ -88,7 +88,6 @@
         <div style="margin-top:12px" class="small-title">Tipos de Avaria mais frequentes</div>
         <div id="tipos-list"></div>
       </div>
-
     </div>
 
         <div class="col-center">
@@ -116,7 +115,6 @@
           <div style="font-size:20px;font-weight:600;color:#444;margin-top:6px"><span id="fotos-num">--</span> Fotos</div>
         </div>
       </div>
-
     </div>
 
         <div class="col-right">
@@ -126,7 +124,7 @@
         <div style="font-size:13px;color:#666"></div>
       </div>
       
-            <div class="card">
+      <div class="card">
         <div class="small-title">Produtividade Média (Pçs Auditadas/Colaborador)</div>
         <div style="font-size:36px;font-weight:800;color:var(--navy)" id="kpi-prod-colab">--</div>
         <div style="font-size:13px;color:#666">média das peças auditadas por colaborador no dia</div>
@@ -223,7 +221,7 @@ function computeKpis(auditRows, checkinRows, ncrRows){
     fotosSum += toNumber(r[COLMAP.audit_fotos]);
     if(r[COLMAP.audit_date]) datas.push(r[COLMAP.audit_date]);
 
-    // NOVO: Produtividade diária (baseado nas colunas G e B)
+    // NOVO: Produtividade diária (baseado nas colunas G e B da Aba 1)
     const colaboradores = toNumber(r["Qtd. Colaboradoras"]);
     const pecasDia = toNumber(r[COLMAP.audit_total]);
     if(colaboradores > 0 && pecasDia > 0){
@@ -232,7 +230,7 @@ function computeKpis(auditRows, checkinRows, ncrRows){
     }
   });
 
- // AJUSTE FUT 02 - agregação diária de Check-in e categorias
+// AJUSTE FUT 02 - agregação diária de Check-in e categorias
 // O toNumber já está definido acima, mas pode ser repetido por segurança
 // const toNumber = v => { if(v===undefined || v===null || v==="") return 0; return Number(String(v).replace(",",".").replace(/\s/g,'')) || 0; }; 
 
@@ -243,7 +241,7 @@ checkinRows.forEach(r => {
   if(!d) return;
   if(!checkByDate[d]) checkByDate[d] = { total:0, CALÇADOS:0, VESTUARIOS:0, ACESSORIOS:0, SUPLEMENTOS:0 };
   // Suporta tanto "CONFERIDAS TOTAL" quanto "CONFERIDAS" (nome variant)
-  const totalField = r["CONFERIDAS"] ?? r["PCONFERIDAS"] ?? r["CONFERIDAS TOTAL"] ?? '0'; // Prioriza a coluna 'CONFERIDAS' (col B)
+  const totalField = r["CONFERIDAS"] ?? r["PCONFERIDAS"] ?? r["CONFERIDAS TOTAL"] ?? '0'; // Prioriza a coluna 'CONFERIDAS' (col B da Aba 2)
   checkByDate[d].total += toNumber(totalField);
   checkByDate[d].CALÇADOS += toNumber(r["CALÇADOS"] || r["CALÇADO"] || 0);
   checkByDate[d].VESTUARIOS += toNumber(r["VESTUARIOS"] || r["VESTUARIO"] || 0);
@@ -364,7 +362,7 @@ function drawCharts(k, auditRows, checkinRows, ncrRows){
       byDate[d].audit += toNumber(r[COLMAP.audit_total] || 0);
       byDate[d].ph += toNumber(r[COLMAP.audit_phh] || 0);
     });
-    const labels = Object.keys(byDate).sort();
+    const labels = Object.keys(byDate).sort(); // Garante que as datas estejam em ordem
     const auditData = labels.map(l=>byDate[l].audit);
     const phData = labels.map(l=> (byDate[l].ph) );
     // NOVO CÁLCULO: usando os dados diários reais de checkByDate
@@ -410,7 +408,7 @@ function drawCharts(k, auditRows, checkinRows, ncrRows){
       }
     });
   } else {
-    // single point: mostrar em barras apenas 1 coluna comparativa
+    // single point: mostrar em barras apenas 1 coluna comparativa (se houver apenas 1 data)
     const labels = [ 'Período' ];
     const auditData = [ k.totalAuditadas ];
     const checkData = [ k.totalConferidas ];
