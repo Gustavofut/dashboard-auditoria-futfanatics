@@ -347,7 +347,16 @@ function drawCharts(k, auditRows, checkinRows, ncrRows){
     const auditData = labels.map(l=>byDate[l].audit);
     const phData = labels.map(l=> (byDate[l].ph) );
     // checkin: if checkinRows contain daily breakdown, adapt; else create single point (total)
-    const checkinData = labels.map(()=> Number(k.totalConferidas/labels.length || 0) );
+   const checkByDate = {};
+checkinRows.forEach(r => {
+  const d = r["Data"] || r["data"] || r["DATA"];
+  if (!d) return;
+  const val = Number(r["CONFERIDAS"] || r["CONFERIDAS TOTAL"] || 0);
+  checkByDate[d] = (checkByDate[d] || 0) + val;
+});
+
+// Gera array alinhado às datas do gráfico
+const checkinData = labels.map(l => checkByDate[l] || 0);
     // draw
     const ctx = document.getElementById('chart-checkin').getContext('2d');
     if(chartCheckin) chartCheckin.destroy();
