@@ -167,7 +167,7 @@ const COLMAP = {
   audit_vest: "VESTUARIOS",
   audit_acess: "ACESSORIOS",
   audit_supl: "SUPLEMENTOS",
-  audit_phh: "Peças por Hora",
+  audit_phh: "hora",
   audit_rnc_count: "quantidade de RNC GERADAS",
   audit_fotos: "quantidade de FOTOS "
 };
@@ -340,7 +340,7 @@ const byDate = {};
 auditRows.forEach(r => {
   const d = (r["Data"] || r["DATA"] || r["data"]) || 'sem-data';
   const totalAudit = Number(r[COLMAP.audit_total] || 0);
-  const hh = Number(r["Peças por Hora"] || r["Peças por hora"] || r["PEÇAS POR HORA"] || 0);
+  const hh = Number(r["hora"] || r["hora"] || r["hora"] || 0);
   if (!byDate[d]) byDate[d] = { audit: 0, ph: 0 };
   byDate[d].audit += totalAudit;
   byDate[d].ph = hh; // valor diário da coluna I (Peças por Hora)
