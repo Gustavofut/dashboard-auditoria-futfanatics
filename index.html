@@ -334,10 +334,9 @@ function drawCharts(k, auditRows, checkinRows, ncrRows){
   // Para exemplo simples: usaremos um único ponto (o total). Se tiver vários dias (múltiplas linhas em auditRows), monte arrays por data.
   // Vamos checar se auditRows possuem várias linhas com 'Data' diferentes
   const dates = auditRows.map(r=>r["Data"] || r["data"] || r["DATA"]).filter(Boolean);
-const auditData = labels.map(l=>byDate[l].audit);
-    const phData = labels.map(l=> (byDate[l].ph) );
-    // checkin: usando os dados diários reais calculados em computeKpis
-    const checkinData = labels.map(l=> k.checkByDate[l]?.total || 0 ); // <--- NOVO CÁLCULO
+  if(dates.length > 1){
+    // montar série por data
+    const byDate = {};
     auditRows.forEach(r=>{
       const d = (r["Data"]||r["DATA"]||r["data"]) || 'sem-data';
       byDate[d] = byDate[d] || {audit:0, ph:0};
