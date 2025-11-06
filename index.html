@@ -1,3 +1,20 @@
+// ---------- formatação números (pt-BR) ----------
+function fmtInt(n){
+  // formata inteiro com separador de milhar (ex: 12.345)
+  if (n === undefined || n === null) return '--';
+  return Number(n).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+}
+function fmtNumber(n, decimals=1){
+  // formata número com casas decimais (ex: 64,4)
+  if (n === undefined || n === null) return '--';
+  return Number(n).toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+function fmtPct(fracao, decimals=1){
+  // recebe fracao (0.321) e retorna string "32,1%"
+  if (fracao === undefined || fracao === null || isNaN(fracao)) return '--';
+  return (Number(fracao) * 100).toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }) + '%';
+}
+// ------------------------------------------------
 <!doctype html>
 <html lang="pt-BR">
 <head>
