@@ -191,6 +191,21 @@ function fetchCsvAsJson(url){
     });
   });
 }
+// ---------- formatação números (pt-BR) ----------
+function fmtInt(n){
+  if (n === undefined || n === null || n === '') return '--';
+  return Number(n).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+}
+function fmtNumber(n, decimals=1){
+  if (n === undefined || n === null || n === '' || isNaN(Number(n))) return '--';
+  return Number(n).toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+function fmtPct(fracao, decimals=1){
+  if (fracao === undefined || fracao === null || fracao === '' || isNaN(Number(fracao))) return '--';
+  // fracao é 0.327 -> 32,7%
+  return (Number(fracao) * 100).toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }) + '%';
+}
+// ------------------------------------------------
 
 /* Calcula KPIs a partir dos arrays de objetos */
 function computeKpis(auditRows, checkinRows, ncrRows){
