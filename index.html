@@ -330,14 +330,6 @@ function renderKpis(k){
 let chartCheckin = null;
 let chartCats = null;
 function drawCharts(k, auditRows, checkinRows, ncrRows){
-  // Calcula o percentual auditado por dia
-const pctAuditadas = labels.map(l => {
-  const audit = auditData[labels.indexOf(l)] || 0;
-  const check = checkinData[labels.indexOf(l)] || 0;
-  if (check === 0) return 0;
-  return (audit / check) * 100;
-});
-
   // Chart 1: barras conferidas vs auditadas (aqui assumimos dados por dia — se tiver vários dias no sheet, adapte)
   // Para exemplo simples: usaremos um único ponto (o total). Se tiver vários dias (múltiplas linhas em auditRows), monte arrays por data.
   // Vamos checar se auditRows possuem várias linhas com 'Data' diferentes
