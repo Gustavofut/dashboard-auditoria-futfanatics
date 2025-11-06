@@ -299,20 +299,31 @@ Object.values(checkByDate).forEach(v=>{
 
 /* Render UI */
 function renderKpis(k){
-  document.getElementById('kpi-pecas').innerText = (typeof k.totalAuditadas === 'number') ? k.totalAuditadas.toLocaleString('pt-BR') : k.totalAuditadas;
-  document.getElementById('kpi-hh').innerText = k.mediaPhh ? k.mediaPhh.toFixed(1) : '--';
-  document.getElementById('rnc-num').innerText = k.rncSum;
-  document.getElementById('fotos-num').innerText = k.fotosSum;
-  document.getElementById('sum-conferidas').innerText = k.totalConferidas;
-  document.getElementById('sum-auditadas').innerText = k.totalAuditadas;
-  document.getElementById('pct-auditado').innerText = k.pctAuditadoSobreConferido ? (k.pctAuditadoSobreConferido*100).toFixed(1)+'%' : '--';
-  document.getElementById('kpi-taxa').innerText = k.taxaNaoConformidade ? (k.taxaNaoConformidade*100).toFixed(1)+'%' : '--';
-  document.getElementById('kpi-taxa-qnt').innerText = k.totalAvariados ? `${k.totalAvariados} peças` : '';
-  // categories list
+function renderKpis(k){
+  // KPIs principais (formatados)
+  document.getElementById('kpi-pecas').innerText = fmtInt(k.totalAuditadas);
+  document.getElementById('kpi-hh').innerText = (k.mediaPhh || k.mediaPhh === 0) ? fmtNumber(k.mediaPhh,1) : '--';
+  document.getElementById('rnc-num').innerText = fmtInt(k.rncSum);
+  document.getElementById('fotos-num').innerText = fmtInt(k.fotosSum);
+
+  // RESUMO RÁPIDO (formatado)
+  document.getElementById('sum-conferidas').innerText = fmtInt(k.totalConferidas);
+  document.getElementById('sum-auditadas').innerText = fmtInt(k.totalAuditadas);
+  document.getElementById('pct-auditado').innerText = k.pctAuditadoSobreConferido !== undefined && k.pctAuditadoSobreConferido !== null
+    ? fmtPct(k.pctAuditadoSobreConferido, 1)
+    : '--';
+
+  // Taxa / qnt de avariados
+  document.getElementById('kpi-taxa').innerText = (k.taxaNaoConformidade || k.taxaNaoConformidade === 0) ? fmtPct(k.taxaNaoConformidade,1) : '--';
+  const taxaQntEl = document.getElementById('kpi-taxa-qnt');
+  if (taxaQntEl) taxaQntEl.innerText = k.totalAvariados ? `${fmtInt(k.totalAvariados)} peças` : '';
+
+  // categories list (format numbers inside)
   const catDiv = document.getElementById('categoria-list'); catDiv.innerHTML='';
   ['CALÇADOS','VESTUARIOS','ACESSORIOS','SUPLEMENTOS'].forEach(cat=>{
+    const val = (k.categoriesAudit && k.categoriesAudit[cat]) ? fmtInt(k.categoriesAudit[cat]) : '0';
     const el = document.createElement('div'); el.className='mini-item';
-    el.innerHTML = `<div style="font-weight:600">${cat}</div><div>${k.categoriesAudit[cat]||0}</div>`;
+    el.innerHTML = `<div style="font-weight:600">${cat}</div><div>${val}</div>`;
     catDiv.appendChild(el);
   });
 
@@ -321,7 +332,7 @@ function renderKpis(k){
   const fornDiv = document.getElementById('fornecedores-list'); fornDiv.innerHTML='';
   fornArr.forEach((f,i)=>{
     const row = document.createElement('div'); row.style.display='flex'; row.style.justifyContent='space-between'; row.style.padding='6px 0';
-    row.innerHTML = `<div>${i+1}º - ${f[0]}</div><div style="font-weight:700">${f[1]}</div>`;
+    row.innerHTML = `<div>${i+1}º - ${f[0]}</div><div style="font-weight:700">${fmtInt(f[1])}</div>`;
     fornDiv.appendChild(row);
   });
 
@@ -330,15 +341,18 @@ function renderKpis(k){
   const tiposDiv = document.getElementById('tipos-list'); tiposDiv.innerHTML='';
   tiposArr.forEach(t=>{
     const r = document.createElement('div'); r.style.display='flex'; r.style.justifyContent='space-between'; r.style.padding='4px 0';
-    r.innerHTML = `<div>${t[0]}</div><div>${t[1]}</div>`;
+    r.innerHTML = `<div>${t[0]}</div><div>${fmtInt(t[1])}</div>`;
     tiposDiv.appendChild(r);
   });
 
   // period
-  const pText = (k.period.min && k.period.max) ? `${k.period.min} → ${k.period.max}` : '--';
+  const pText = (k.period && k.period.min && k.period.max) ? `${k.period.min} → ${k.period.max}` : '--';
   document.getElementById('periodo-text').innerText = pText;
-  // meta note (show days below 25% inspection goal)
+
+  // meta note (texto)
   document.getElementById('meta-note').innerText = `Meta mínima de inspeção diária: 25% - o painel marca percentuais por dia no gráfico.`;
+}
+
 }
 
 /* Desenhar gráficos */
