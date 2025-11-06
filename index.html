@@ -380,8 +380,8 @@ const checkinData = labels.map(l => checkByDate[l] || 0);
     const phData = [ k.mediaPhh ];
     const ctx = document.getElementById('chart-checkin').getContext('2d');
     if(chartCheckin) chartCheckin.destroy();
-   // ==================== GRÁFICO CHECK-IN (ATUALIZADO FUT) ====================
-const ctx = document.getElementById('chart-checkin').getContext('2d');
+    chartCheckin = new Chart(ctx, {
+    const ctx = document.getElementById('chart-checkin').getContext('2d');
 if (chartCheckin) chartCheckin.destroy();
 
 // Calcula % auditado por dia
@@ -427,7 +427,6 @@ chartCheckin = new Chart(ctx, {
     }
   }
 });
-
 
   // Chart 2: categorias (checkin)
   const catLabels = ['CALÇADOS','VESTUARIOS','ACESSORIOS','SUPLEMENTOS'];
