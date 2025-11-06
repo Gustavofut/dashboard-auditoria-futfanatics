@@ -380,25 +380,54 @@ const checkinData = labels.map(l => checkByDate[l] || 0);
     const phData = [ k.mediaPhh ];
     const ctx = document.getElementById('chart-checkin').getContext('2d');
     if(chartCheckin) chartCheckin.destroy();
-    chartCheckin = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [
-          { label:'Conferidas', data: checkData, backgroundColor:'#1976d2' },
-          { label:'Auditadas', data: auditData, backgroundColor:'#0b5f3a' },
-          { label:'Média Pçs H/H', data: phData, type:'line', borderColor:'gold', tension:0.3, pointRadius:6, yAxisID:'y1' }
-        ]
-      },
-      options: {
-        responsive:true,
-        scales: {
-          y: { beginAtZero:true, position:'left' },
-          y1: { beginAtZero:true, position:'right', grid:{display:false} }
+   // ==================== GRÁFICO CHECK-IN (ATUALIZADO FUT) ====================
+const ctx = document.getElementById('chart-checkin').getContext('2d');
+if (chartCheckin) chartCheckin.destroy();
+
+// Calcula % auditado por dia
+const pctAuditadas = labels.map((l, i) => {
+  const audit = auditData[i] || 0;
+  const check = checkinData[i] || 0;
+  return check > 0 ? (audit / check) * 100 : 0;
+});
+
+chartCheckin = new Chart(ctx, {
+  type: 'bar',
+  data: {
+    labels,
+    datasets: [
+      { label:'Conferidas', data: checkinData, backgroundColor:'#1976d2' },
+      { label:'Auditadas', data: auditData, backgroundColor:'#0b5f3a' },
+      { label:'Média Pçs H/H', data: phData, type:'line', borderColor:'gold', tension:0.3, pointRadius:3 }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { position: 'top' },
+      tooltip: {
+        callbacks: {
+          // Mostra % auditado no tooltip da barra verde (Auditadas)
+          label: function(context) {
+            const datasetLabel = context.dataset.label || '';
+            const index = context.dataIndex;
+            const value = context.formattedValue;
+            if (datasetLabel === 'Auditadas') {
+              const pct = pctAuditadas[index];
+              return `${datasetLabel}: ${value} (${pct.toFixed(1)}%)`;
+            }
+            return `${datasetLabel}: ${value}`;
+          }
         }
       }
-    });
+    },
+    scales: {
+      y: { beginAtZero: true, position: 'left' },
+      y1: { beginAtZero: true, position: 'right', grid: { display: false } }
+    }
   }
+});
+
 
   // Chart 2: categorias (checkin)
   const catLabels = ['CALÇADOS','VESTUARIOS','ACESSORIOS','SUPLEMENTOS'];
