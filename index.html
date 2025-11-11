@@ -362,8 +362,7 @@ const checkinData = labels.map(l => checkByDate[l] || 0);
     // draw
     const ctx = document.getElementById('chart-checkin').getContext('2d');
     if(chartCheckin) chartCheckin.destroy();
-    chartCheckin = new Chart(ctx, {
-      chartCheckin = new Chart(ctx, {
+   chartCheckin = new Chart(ctx, {
   type: 'bar',
   data: {
     labels,
