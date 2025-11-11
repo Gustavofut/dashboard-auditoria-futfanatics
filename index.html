@@ -290,7 +290,8 @@ function renderKpis(k){
   document.getElementById('fotos-num').innerText = k.fotosSum;
   document.getElementById('sum-conferidas').innerText =
   typeof k.totalConferidas === 'number' ? k.totalConferidas.toLocaleString('pt-BR') : k.totalConferidas;
-  document.getElementById('sum-auditadas').innerText = k.totalAuditadas;
+  document.getElementById('sum-auditadas').innerText =
+  typeof k.totalAuditadas === 'number' ? k.totalAuditadas.toLocaleString('pt-BR') : k.totalAuditadas;
   document.getElementById('pct-auditado').innerText = k.pctAuditadoSobreConferido ? (k.pctAuditadoSobreConferido*100).toFixed(1)+'%' : '--';
   document.getElementById('kpi-taxa').innerText = k.taxaNaoConformidade ? (k.taxaNaoConformidade*100).toFixed(1)+'%' : '--';
   document.getElementById('kpi-taxa-qnt').innerText = k.totalAvariados ? `${k.totalAvariados} peças` : '';
