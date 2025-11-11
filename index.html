@@ -392,30 +392,26 @@ const checkinData = labels.map(l => checkByDate[l] || 0);
       }
     ]
   },
-  options: {
-    responsive: true,
-    plugins: {
-      legend: { position: 'top' },
-      tooltip: {
-        callbacks: {
-          afterBody: function(context) {
-            const i = context[0].dataIndex;
-            const pct = checkinData[i] > 0 ? ((auditData[i] / checkinData[i]) * 100).toFixed(1) : 0;
-            return `Auditado: ${pct}%`;
-          }
-        }
-      },
-      datalabels: {
-        display: true,
-        align: 'end',
-        color: '#000',
-        formatter: function(value, context) {
+ options: {
+  responsive: true,
+  plugins: {
+    legend: { position: 'top' },
+    tooltip: {
+      callbacks: {
+        label: function (context) {
           const i = context.dataIndex;
-          const pct = checkinData[i] > 0 ? (auditData[i] / checkinData[i]) * 100 : 0;
-          return pct ? pct.toFixed(1) + '%' : '';
+          const conferidas = checkinData[i];
+          const auditadas = auditData[i];
+          const pct = conferidas > 0 ? ((auditadas / conferidas) * 100).toFixed(1) : 0;
+          return `${context.dataset.label}: ${auditadas.toLocaleString('pt-BR')} (${pct}%)`;
         }
       }
-    },
+    }
+  },
+  scales: {
+    y: { beginAtZero: true }
+  }
+}
     scales: {
       y: { beginAtZero: true }
     }
