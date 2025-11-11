@@ -9,8 +9,6 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <!-- PapaParse para CSV do Google Sheets -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
-
 
   <style>
     :root{
@@ -365,60 +363,17 @@ const checkinData = labels.map(l => checkByDate[l] || 0);
     const ctx = document.getElementById('chart-checkin').getContext('2d');
     if(chartCheckin) chartCheckin.destroy();
     chartCheckin = new Chart(ctx, {
-  type: 'bar',
-  data: {
-    labels,
-    datasets: [
-      {
-        label: 'Conferidas',
-        data: checkinData,
-        backgroundColor: '#1976d2'
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { label:'Conferidas', data: checkinData, backgroundColor:'#1976d2' },
+          { label:'Auditadas', data: auditData, backgroundColor:'#0b5f3a' },
+          { label:'Média Pçs H/H', data: phData, type:'line', borderColor:'gold', tension:0.3, pointRadius:3 }
+        ]
       },
-      {
-        label: 'Auditadas',
-        data: auditData,
-        backgroundColor: auditData.map((v, i) => {
-          const pct = checkinData[i] > 0 ? (v / checkinData[i]) * 100 : 0;
-          return pct < 25 ? 'crimson' : '#0b5f3a'; // vermelho se <25%
-        }),
-      },
-      {
-        label: 'Média Pçs H/H',
-        data: phData,
-        type: 'line',
-        borderColor: 'gold',
-        tension: 0.3,
-        pointRadius: 3
-      }
-    ]
-  },
- options: {
-  responsive: true,
-  plugins: {
-    legend: { position: 'top' },
-    tooltip: {
-      callbacks: {
-        label: function (context) {
-          const i = context.dataIndex;
-          const conferidas = checkinData[i];
-          const auditadas = auditData[i];
-          const pct = conferidas > 0 ? ((auditadas / conferidas) * 100).toFixed(1) : 0;
-          return `${context.dataset.label}: ${auditadas.toLocaleString('pt-BR')} (${pct}%)`;
-        }
-      }
-    }
-  },
-  scales: {
-    y: { beginAtZero: true }
-  }
-}
-    scales: {
-      y: { beginAtZero: true }
-    }
-  },
-  plugins: [ChartDataLabels]
-});
-
+      options: { responsive:true, plugins:{legend:{position:'top'}} }
+    });
   } else {
     // single point: mostrar em barras apenas 1 coluna comparativa
     const labels = [ 'Período' ];
