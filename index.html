@@ -9,6 +9,8 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <!-- PapaParse para CSV do Google Sheets -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+
 
   <style>
     :root{
@@ -363,17 +365,64 @@ const checkinData = labels.map(l => checkByDate[l] || 0);
     const ctx = document.getElementById('chart-checkin').getContext('2d');
     if(chartCheckin) chartCheckin.destroy();
     chartCheckin = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [
-          { label:'Conferidas', data: checkinData, backgroundColor:'#1976d2' },
-          { label:'Auditadas', data: auditData, backgroundColor:'#0b5f3a' },
-          { label:'Média Pçs H/H', data: phData, type:'line', borderColor:'gold', tension:0.3, pointRadius:3 }
-        ]
+  type: 'bar',
+  data: {
+    labels,
+    datasets: [
+      {
+        label: 'Conferidas',
+        data: checkinData,
+        backgroundColor: '#1976d2'
       },
-      options: { responsive:true, plugins:{legend:{position:'top'}} }
-    });
+      {
+        label: 'Auditadas',
+        data: auditData,
+        backgroundColor: auditData.map((v, i) => {
+          const pct = checkinData[i] > 0 ? (v / checkinData[i]) * 100 : 0;
+          return pct < 25 ? 'crimson' : '#0b5f3a'; // vermelho se <25%
+        }),
+      },
+      {
+        label: 'Média Pçs H/H',
+        data: phData,
+        type: 'line',
+        borderColor: 'gold',
+        tension: 0.3,
+        pointRadius: 3
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { position: 'top' },
+      tooltip: {
+        callbacks: {
+          afterBody: function(context) {
+            const i = context[0].dataIndex;
+            const pct = checkinData[i] > 0 ? ((auditData[i] / checkinData[i]) * 100).toFixed(1) : 0;
+            return `Auditado: ${pct}%`;
+          }
+        }
+      },
+      datalabels: {
+        display: true,
+        align: 'end',
+        color: '#000',
+        formatter: function(value, context) {
+          const i = context.dataIndex;
+          const pct = checkinData[i] > 0 ? (auditData[i] / checkinData[i]) * 100 : 0;
+          return pct ? pct.toFixed(1) + '%' : '';
+        }
+      }
+    },
+    scales: {
+      y: { beginAtZero: true }
+    }
+  },
+  plugins: [ChartDataLabels]
+});
+
   } else {
     // single point: mostrar em barras apenas 1 coluna comparativa
     const labels = [ 'Período' ];
