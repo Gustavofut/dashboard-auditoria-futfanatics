@@ -363,17 +363,42 @@ const checkinData = labels.map(l => checkByDate[l] || 0);
     const ctx = document.getElementById('chart-checkin').getContext('2d');
     if(chartCheckin) chartCheckin.destroy();
     chartCheckin = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [
-          { label:'Conferidas', data: checkinData, backgroundColor:'#1976d2' },
-          { label:'Auditadas', data: auditData, backgroundColor:'#0b5f3a' },
-          { label:'Média Pçs H/H', data: phData, type:'line', borderColor:'gold', tension:0.3, pointRadius:3 }
-        ]
-      },
-      options: { responsive:true, plugins:{legend:{position:'top'}} }
-    });
+      chartCheckin = new Chart(ctx, {
+  type: 'bar',
+  data: {
+    labels,
+    datasets: [
+      { label:'Conferidas', data: checkinData, backgroundColor:'#1976d2' },
+      { label:'Auditadas', data: auditData, backgroundColor:'#0b5f3a' },
+      { label:'Média Pçs H/H', data: phData, type:'line', borderColor:'gold', tension:0.3, pointRadius:3 }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { position: 'top' },
+      tooltip: {
+        callbacks: {
+          label: function (context) {
+            const datasetLabel = context.dataset.label;
+            const value = context.parsed.y;
+            if (datasetLabel === 'Auditadas') {
+              const i = context.dataIndex;
+              const conferidas = checkinData[i];
+              const pct = conferidas > 0 ? ((value / conferidas) * 100).toFixed(1) : 0;
+              return `${datasetLabel}: ${value.toLocaleString('pt-BR')} (${pct}%)`;
+            }
+            return `${datasetLabel}: ${value.toLocaleString('pt-BR')}`;
+          }
+        }
+      }
+    },
+    scales: {
+      y: { beginAtZero: true }
+    }
+  }
+});
+
   } else {
     // single point: mostrar em barras apenas 1 coluna comparativa
     const labels = [ 'Período' ];
