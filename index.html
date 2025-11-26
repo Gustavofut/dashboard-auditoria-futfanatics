@@ -515,7 +515,7 @@ async function drawAnnualFromSheet() {
    HISTÓRICO ANUAL - LEITURA DA ABA MANUAL
    ============================================================ */
 async function loadAnnualHistory() {
-    const sheetName = "HISTÓRICO_ANUAL";
+    const sheetName = "4";
     const url = `${SHEET_URL}&sheet=${sheetName}`;
     const res = await fetch(url);
     const data = await res.json();
