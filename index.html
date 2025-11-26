@@ -168,7 +168,6 @@ const SHEET_NAMES = {
   audit: "1",
   checkin: "2",
   ncr: "3"
-  ncr: "4"
 };
 /* Se algum cabeçalho tiver variação, mapeie aqui (nomes exatos das colunas no google sheet) */
 const COLMAP = {
@@ -516,7 +515,7 @@ async function drawAnnualFromSheet() {
    HISTÓRICO ANUAL - LEITURA DA ABA MANUAL
    ============================================================ */
 async function loadAnnualHistory() {
-    const sheetName = "4";
+    const sheetName = "HISTÓRICO_ANUAL";
     const url = `${SHEET_URL}&sheet=${sheetName}`;
     const res = await fetch(url);
     const data = await res.json();
