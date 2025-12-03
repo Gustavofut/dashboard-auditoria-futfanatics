@@ -1,21 +1,175 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>DASHBOARD CONTROLE DE QUALIDADE NOTURNO - FutFanatics</title>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- PapaParse para CSV do Google Sheets -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+  <style>
+    :root{
+      --bg: #ffffff;
+      --navy: #001C40;       /* azul escuro FutFanatics */
+      --accent: #A4FF00;     /* verde-limão */
+      --muted: #f5f6f7;
+      --card-radius: 12px;
+      --card-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    }
+    html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;}
+    body{background:var(--bg); color:var(--navy); padding:18px;}
+    header{display:flex;align-items:center;gap:18px;margin-bottom:18px;}
+    header h1{margin:0;font-size:20px;color:var(--navy);}
+    .grid{
+      display:grid;
+      grid-template-columns: 320px 1fr 420px;
+      gap:18px;
+      align-items:start;
+    }
+
+    /* Left column (cards) */
+    .col-left{display:flex;flex-direction:column;gap:18px;}
+    .card{background:#fff;border-radius:var(--card-radius);box-shadow:var(--card-shadow);padding:16px;border:2px solid rgba(0,0,0,0.04);}
+    .kpi-large{font-size:48px;font-weight:700;text-align:center;color:var(--navy);}
+    .kpi-label{text-align:center;font-size:13px;color:#333;margin-top:6px;}
+    .mini-list{display:flex;flex-direction:column;gap:6px;margin-top:6px;}
+    .mini-item{display:flex;justify-content:space-between;padding:6px;background:var(--muted);border-radius:8px;font-size:13px}
+
+    /* Center - charts */
+    .col-center{display:flex;flex-direction:column;gap:18px;}
+    .chart-card{background:#fff;border-radius:var(--card-radius);padding:12px;box-shadow:var(--card-shadow);}
+    .chart-row{display:flex;gap:12px;align-items:center;}
+    .legend{display:flex;gap:10px;align-items:center;font-size:13px}
+    .legend-swatch{width:14px;height:14px;border-radius:3px}
+    /* Right column - ranking + tipos */
+    .col-right{display:flex;flex-direction:column;gap:18px;}
+    .small-title{font-weight:700;color:var(--navy);font-size:13px;margin-bottom:8px}
+    footer{margin-top:18px;font-size:12px;color:#666}
+    /* responsive */
+    @media (max-width:1100px){
+      .grid{grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="FUT.jfif" alt="Logo" style="width:44px;height:44px;background:var(--navy);border-radius:8px">
+    <div>
+      <h1>DASHBOARD CONTROLE DE QUALIDADE NOTURNO - FutFanatics</h1>
+      <div style="font-size:13px;color:#666">Período: <span id="periodo-text">--</span></div>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- LEFT -->
+    <div class="col-left">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-size:12px;color:#666">PEÇAS AUDITADAS</div>
+            <div class="kpi-large" id="kpi-pecas">--</div>
+            <div class="kpi-label">total do período</div>
+          </div>
+          <div style="width:120px">
+            <div style="font-size:12px;color:#666">TAXA DE NÃO CONFORMIDADE</div>
+            <div style="font-weight:700;font-size:24px;color:var(--navy)" id="kpi-taxa">--</div>
+            <div style="font-size:12px;color:#999" id="kpi-taxa-qnt">--</div>
+          </div>
+        </div>
+        <div style="margin-top:12px">
+          <div class="small-title">Distribuição por categoria</div>
+          <div class="mini-list" id="categoria-list"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="small-title">Top 3 Fornecedores Críticos </div>
+        <div id="fornecedores-list"></div>
+        <div style="margin-top:12px" class="small-title">Tipos de Avaria mais frequentes</div>
+        <div id="tipos-list"></div>
+      </div>
+
+    </div>
+
+    <!-- CENTER -->
+    <div class="col-center">
+      <div class="chart-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div class="small-title">Peças Conferidas (Check-in) vs Peças Auditadas</div>
+          <div style="display:flex;gap:12px;align-items:center">
+            <div class="legend"><div class="legend-swatch" style="background:#1976d2"></div> Conferidas</div>
+            <div class="legend"><div class="legend-swatch" style="background:#0b5f3a"></div> Auditadas</div>
+            <div class="legend"><div class="legend-swatch" style="background:gold"></div> Média peças H/H</div>
+          </div>
+        </div>
+        <canvas id="chart-checkin" height="150"></canvas>
+        <div style="font-size:12px;color:#666;margin-top:8px" id="meta-note"></div>
+      </div>
+
+      <div class="chart-card" style="display:flex;gap:12px;align-items:center;">
+        <div style="flex:1">
+          <div class="small-title">Peças por Categoria (Check-in)</div>
+          <canvas id="chart-categories" height="120"></canvas>
+        </div>
+        <div style="width:220px">
+          <div class="small-title">RNC / FOTOS (OR)</div>
+          <div style="font-size:24px;font-weight:700;color:var(--navy)"><span id="rnc-num">--</span> RNC</div>
+          <div style="font-size:24px;font-weight:700;color:var(--navy)"><span id="fotos-num">--</span> FOTOS</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT -->
+    <div class="col-right">
+
+<!-- CARD: Linha do Tempo Mensal -->
+<div class="card">
+  <div class="small-title">Linha do Tempo Mensal</div>
+  <canvas id="chart-monthly" height="180"></canvas>
+  <div style="font-size:12px;color:#666;margin-top:10px">
+      Histórico anual alimentado pela aba HISTÓRICO_ANUAL.
+  </div>
+</div>
+
+      <div class="card">
+        <div class="small-title">Média Peças H/H (média das médias)</div>
+        <div style="font-size:36px;font-weight:800;color:var(--navy)" id="kpi-hh">--</div>
+        <div style="font-size:13px;color:#666"></div>
+      </div>
+
+      <div class="card">
+        <div class="small-title">Resumo rápido</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;justify-content:space-between"><div>Peças Conferidas</div><div id="sum-conferidas">--</div></div>
+          <div style="display:flex;justify-content:space-between"><div>Peças Auditadas</div><div id="sum-auditadas">--</div></div>
+          <div style="display:flex;justify-content:space-between"><div>% Auditado sobre Conferido</div><div id="pct-auditado">--</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div>Gerado automaticamente. Para alterar as fontes de dados, atualize o Google Sheets e publique a aba como CSV.</div>
+  </footer>
+
 <script>
 /*
   CONFIGURE AQUI:
-  - ID da planilha Google
+  - Cole o ID da planilha Google (parte entre /d/ e /edit)
+  - Se mudar nomes das abas, atualize SHEET_NAMES
+  - Atenção para nomes de colunas com espaços extras (ex.: "fotos ")
 */
 const SHEET_ID = "1RisWgpsGELH184pSKGB77axrCd7xMfVdBkeK3_HGWP0";
-
-/* Nomes das abas (Devem ser EXATOS como no Google Sheets)
-  Adicionei a aba "history" para o histórico anual
-*/
 const SHEET_NAMES = {
   audit: "1",
   checkin: "2",
-  ncr: "3",
-  history: "HISTORICO_ANUAL" // Nome da nova aba
+  ncr: "3"
 };
-
-/* Mapeamento de colunas (Aba 1 - Auditoria) */
+/* Se algum cabeçalho tiver variação, mapeie aqui (nomes exatos das colunas no google sheet) */
 const COLMAP = {
   audit_date: "Data",
   audit_total: "Peças Auditadas (dia) TOTAL",
@@ -28,12 +182,12 @@ const COLMAP = {
   audit_fotos: "fotos"
 };
 
-/* --- FUNÇÕES DE CARREGAMENTO --- */
-
 function gsheetCsvUrl(sheetName){
+  // Formato: https://docs.google.com/spreadsheets/d/{ID}/gviz/tq?tqx=out:csv&sheet={sheetName}
   return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
 }
 
+/* Util: parse CSV via PapaParse returning array of objects */
 function fetchCsvAsJson(url){
   return new Promise((resolve,reject)=>{
     Papa.parse(url, {
@@ -48,18 +202,13 @@ function fetchCsvAsJson(url){
   });
 }
 
-/* Helper para limpar números (ex: "30%" -> 30 ou "1.200,50" -> 1200.50) */
-const cleanNum = (v) => {
-  if(v === undefined || v === null || v === "") return 0;
-  if(typeof v === 'number') return v;
-  // Remove % e espaços, troca vírgula por ponto
-  let s = String(v).replace('%','').replace(/\s/g,'').replace(',','.');
-  return Number(s) || 0;
-};
-
-/* --- CÁLCULO DE KPIS (ABAS 1, 2, 3) --- */
+/* Calcula KPIs a partir dos arrays de objetos */
 function computeKpis(auditRows, checkinRows, ncrRows){
-  // 1. Auditoria e Categorias
+  // auditRows: array com linhas da aba PEÇAS AUDITADAS
+  // checkinRows: array (normalmente 1 linha com totais)
+  // ncrRows: linhas da aba PEÇAS NÃO CONFORMES
+
+  // 1) total peças auditadas
   let totalAuditadas = 0;
   let categoriesAudit = {CALÇADOS:0, VESTUARIOS:0, ACESSORIOS:0, SUPLEMENTOS:0};
   let phhList = [];
@@ -68,58 +217,53 @@ function computeKpis(auditRows, checkinRows, ncrRows){
   let datas = [];
 
   auditRows.forEach(r=>{
-    totalAuditadas += cleanNum(r[COLMAP.audit_total]);
-    categoriesAudit.CALÇADOS += cleanNum(r[COLMAP.audit_cald]);
-    categoriesAudit.VESTUARIOS += cleanNum(r[COLMAP.audit_vest]);
-    categoriesAudit.ACESSORIOS += cleanNum(r[COLMAP.audit_acess]);
-    categoriesAudit.SUPLEMENTOS += cleanNum(r[COLMAP.audit_supl]);
-    
-    const ph = cleanNum(r[COLMAP.audit_phh]); 
-    if(ph > 0) phhList.push(ph);
-    
-    rncSum += cleanNum(r[COLMAP.audit_rnc_count]);
-    fotosSum += cleanNum(r[COLMAP.audit_fotos]);
-    
+    const toNumber = v => { if(v===undefined || v===null || v==="") return 0; return Number(String(v).replace(",",".").replace(/\s/g,'')) || 0; };
+    totalAuditadas += toNumber(r[COLMAP.audit_total]);
+    categoriesAudit.CALÇADOS += toNumber(r[COLMAP.audit_cald]);
+    categoriesAudit.VESTUARIOS += toNumber(r[COLMAP.audit_vest]);
+    categoriesAudit.ACESSORIOS += toNumber(r[COLMAP.audit_acess]);
+    categoriesAudit.SUPLEMENTOS += toNumber(r[COLMAP.audit_supl]);
+    const ph = toNumber(r[COLMAP.audit_phh]); if(ph) phhList.push(ph);
+    rncSum += toNumber(r[COLMAP.audit_rnc_count]);
+    fotosSum += toNumber(r[COLMAP.audit_fotos]);
     if(r[COLMAP.audit_date]) datas.push(r[COLMAP.audit_date]);
   });
 
-  // 2. Check-in (Conferidas)
-  const checkByDate = {};
-  checkinRows.forEach(r => {
-    // Tenta pegar a data de várias formas caso mude o cabeçalho
-    const d = r["Data"] || r["data"] || r["DATA"] || '';
-    if(!d) return;
-    
-    if(!checkByDate[d]) checkByDate[d] = { total:0, cats:{CALÇADOS:0, VESTUARIOS:0, ACESSORIOS:0, SUPLEMENTOS:0} };
-    
-    // Tenta pegar o total conferido
-    const totalField = r["CONFERIDAS TOTAL"] ?? r["CONFERIDAS"] ?? r["PCONFERIDAS"] ?? '0';
-    checkByDate[d].total += cleanNum(totalField);
-    
-    // Categorias checkin
-    checkByDate[d].cats.CALÇADOS += cleanNum(r["CALÇADOS"] || r["CALÇADO"]);
-    checkByDate[d].cats.VESTUARIOS += cleanNum(r["VESTUARIOS"] || r["VESTUARIO"]);
-    checkByDate[d].cats.ACESSORIOS += cleanNum(r["ACESSORIOS"] || r["ACESSORIO"]);
-    checkByDate[d].cats.SUPLEMENTOS += cleanNum(r["SUPLEMENTOS"] || r["SUPLEMENTO"]);
-  });
+ // AJUSTE FUT 02 - agregação diária de Check-in e categorias
+const toNumber = v => { if(v===undefined || v===null || v==="") return 0; return Number(String(v).replace(",",".").replace(/\s/g,'')) || 0; };
 
-  // Totais checkin
-  let totalConferidas = 0;
-  const check_categories = { CALÇADOS:0, VESTUARIOS:0, ACESSORIOS:0, SUPLEMENTOS:0 };
-  Object.values(checkByDate).forEach(v=>{
-    totalConferidas += v.total;
-    check_categories.CALÇADOS += v.cats.CALÇADOS;
-    check_categories.VESTUARIOS += v.cats.VESTUARIOS;
-    check_categories.ACESSORIOS += v.cats.ACESSORIOS;
-    check_categories.SUPLEMENTOS += v.cats.SUPLEMENTOS;
-  });
+// Agregar checkinRows por Data (mesmo padrão da aba audit)
+const checkByDate = {};
+checkinRows.forEach(r => {
+  const d = r["Data"] || r["data"] || r["DATA"] || '';
+  if(!d) return;
+  if(!checkByDate[d]) checkByDate[d] = { total:0, CALÇADOS:0, VESTUARIOS:0, ACESSORIOS:0, SUPLEMENTOS:0 };
+  // Suporta tanto "CONFERIDAS TOTAL" quanto "CONFERIDAS" (nome variant)
+  const totalField = r["CONFERIDAS TOTAL"] ?? r["CONFERIDAS"] ?? r["PCONFERIDAS"] ?? '0';
+  checkByDate[d].total += toNumber(totalField);
+  checkByDate[d].CALÇADOS += toNumber(r["CALÇADOS"] || r["CALÇADO"] || 0);
+  checkByDate[d].VESTUARIOS += toNumber(r["VESTUARIOS"] || r["VESTUARIO"] || 0);
+  checkByDate[d].ACESSORIOS += toNumber(r["ACESSORIOS"] || r["ACESSORIO"] || 0);
+  checkByDate[d].SUPLEMENTOS += toNumber(r["SUPLEMENTOS"] || r["SUPLEMENTO"] || 0);
+});
 
-  // 3. NCR (Não conformes)
+// Totais do período (soma de todos os dias)
+let totalConferidas = 0;
+const check_categories = { CALÇADOS:0, VESTUARIOS:0, ACESSORIOS:0, SUPLEMENTOS:0 };
+Object.values(checkByDate).forEach(v=>{
+  totalConferidas += v.total;
+  check_categories.CALÇADOS += v.CALÇADOS;
+  check_categories.VESTUARIOS += v.VESTUARIOS;
+  check_categories.ACESSORIOS += v.ACESSORIOS;
+  check_categories.SUPLEMENTOS += v.SUPLEMENTOS;
+});
+
+  // ncr aggregation
   const fornecedores = {};
   const tipos = {};
   let totalAvariados = 0;
   ncrRows.forEach(r=>{
-    const qtd = cleanNum(r["QNTD"]);
+    const qtd = toNumber(r["QNTD"]);
     const f = r["FORNECEDOR"] || "SEM FORNECEDOR";
     const t = r["TIPO DE AVARIA"] || "OUTRO";
     fornecedores[f] = (fornecedores[f]||0) + qtd;
@@ -127,169 +271,197 @@ function computeKpis(auditRows, checkinRows, ncrRows){
     totalAvariados += qtd;
   });
 
-  // Taxas
   const taxaNaoConformidade = totalAuditadas>0 ? totalAvariados/totalAuditadas : 0;
   const mediaPhh = phhList.length>0 ? phhList.reduce((a,b)=>a+b,0)/phhList.length : 0;
   const pctAuditadoSobreConferido = totalConferidas>0 ? (totalAuditadas / totalConferidas) : 0;
 
   return {
     period: {min: datas.length?datas[0]:null, max: datas.length?datas[datas.length-1]:null},
-    totalAuditadas, categoriesAudit, mediaPhh,
-    totalConferidas, check_categories,
-    totalAvariados, taxaNaoConformidade, rncSum, fotosSum,
-    fornecedores, tipos, pctAuditadoSobreConferido,
-    auditRows, checkinRows // Passando dados brutos para os gráficos diários
+    totalAuditadas,
+    categoriesAudit,
+    mediaPhh,
+    totalConferidas,
+    check_categories,
+    totalAvariados,
+    taxaNaoConformidade,
+    rncSum,
+    fotosSum,
+    fornecedores,
+    tipos,
+    pctAuditadoSobreConferido
   };
 }
 
-/* --- RENDERIZAÇÃO TEXTUAL (DOM) --- */
+/* Render UI */
 function renderKpis(k){
-  document.getElementById('kpi-pecas').innerText = k.totalAuditadas.toLocaleString('pt-BR');
-  document.getElementById('kpi-hh').innerText = k.mediaPhh.toFixed(1);
+  document.getElementById('kpi-pecas').innerText = (typeof k.totalAuditadas === 'number') ? k.totalAuditadas.toLocaleString('pt-BR') : k.totalAuditadas;
+  document.getElementById('kpi-hh').innerText = k.mediaPhh ? k.mediaPhh.toFixed(1) : '--';
   document.getElementById('rnc-num').innerText = k.rncSum;
   document.getElementById('fotos-num').innerText = k.fotosSum;
-  
-  document.getElementById('sum-conferidas').innerText = k.totalConferidas.toLocaleString('pt-BR');
-  document.getElementById('sum-auditadas').innerText = k.totalAuditadas.toLocaleString('pt-BR');
-  document.getElementById('pct-auditado').innerText = (k.pctAuditadoSobreConferido*100).toFixed(1)+'%';
-  
-  document.getElementById('kpi-taxa').innerText = (k.taxaNaoConformidade*100).toFixed(1)+'%';
-  document.getElementById('kpi-taxa-qnt').innerText = `${k.totalAvariados} peças`;
-
-  // Lista categorias (Auditoria)
+  document.getElementById('sum-conferidas').innerText =
+  typeof k.totalConferidas === 'number' ? k.totalConferidas.toLocaleString('pt-BR') : k.totalConferidas;
+  document.getElementById('sum-auditadas').innerText =
+  typeof k.totalAuditadas === 'number' ? k.totalAuditadas.toLocaleString('pt-BR') : k.totalAuditadas;
+  document.getElementById('pct-auditado').innerText = k.pctAuditadoSobreConferido ? (k.pctAuditadoSobreConferido*100).toFixed(1)+'%' : '--';
+  document.getElementById('kpi-taxa').innerText = k.taxaNaoConformidade ? (k.taxaNaoConformidade*100).toFixed(1)+'%' : '--';
+  document.getElementById('kpi-taxa-qnt').innerText = k.totalAvariados ? `${k.totalAvariados} peças` : '';
+  // categories list
   const catDiv = document.getElementById('categoria-list'); catDiv.innerHTML='';
   ['CALÇADOS','VESTUARIOS','ACESSORIOS','SUPLEMENTOS'].forEach(cat=>{
     const el = document.createElement('div'); el.className='mini-item';
-    el.innerHTML = `<div style="font-weight:600">${cat}</div><div>${(k.categoriesAudit[cat]||0).toLocaleString('pt-BR')}</div>`;
+    el.innerHTML = `<div style="font-weight:600">${cat}</div><div>${k.categoriesAudit[cat]||0}</div>`;
     catDiv.appendChild(el);
   });
 
-  // Top 3 Fornecedores
+  // fornecedores top3
   const fornArr = Object.entries(k.fornecedores || {}).sort((a,b)=>b[1]-a[1]).slice(0,3);
   const fornDiv = document.getElementById('fornecedores-list'); fornDiv.innerHTML='';
   fornArr.forEach((f,i)=>{
-    const row = document.createElement('div'); 
-    row.style.cssText='display:flex;justify-content:space-between;padding:6px 0';
+    const row = document.createElement('div'); row.style.display='flex'; row.style.justifyContent='space-between'; row.style.padding='6px 0';
     row.innerHTML = `<div>${i+1}º - ${f[0]}</div><div style="font-weight:700">${f[1]}</div>`;
     fornDiv.appendChild(row);
   });
 
-  // Top Avarias
+  // tipos de avaria
   const tiposArr = Object.entries(k.tipos || {}).sort((a,b)=>b[1]-a[1]).slice(0,6);
   const tiposDiv = document.getElementById('tipos-list'); tiposDiv.innerHTML='';
   tiposArr.forEach(t=>{
-    const r = document.createElement('div'); 
-    r.style.cssText='display:flex;justify-content:space-between;padding:4px 0';
+    const r = document.createElement('div'); r.style.display='flex'; r.style.justifyContent='space-between'; r.style.padding='4px 0';
     r.innerHTML = `<div>${t[0]}</div><div>${t[1]}</div>`;
     tiposDiv.appendChild(r);
   });
 
-  // Período
+  // period
   const pText = (k.period.min && k.period.max) ? `${k.period.min} → ${k.period.max}` : '--';
   document.getElementById('periodo-text').innerText = pText;
-  document.getElementById('meta-note').innerText = "Meta mínima de inspeção diária: 25%";
+  // meta note (show days below 25% inspection goal)
+  document.getElementById('meta-note').innerText = `Meta mínima de inspeção diária: 25% - o painel marca percentuais por dia no gráfico.`;
 }
 
-/* --- GRÁFICOS DIÁRIOS (CENTRO) --- */
+/* Desenhar gráficos */
 let chartCheckin = null;
 let chartCats = null;
+function drawCharts(k, auditRows, checkinRows, ncrRows){
+  // Chart 1: barras conferidas vs auditadas (aqui assumimos dados por dia — se tiver vários dias no sheet, adapte)
+  // Para exemplo simples: usaremos um único ponto (o total). Se tiver vários dias (múltiplas linhas em auditRows), monte arrays por data.
+  // Vamos checar se auditRows possuem várias linhas com 'Data' diferentes
+  const dates = auditRows.map(r=>r["Data"] || r["data"] || r["DATA"]).filter(Boolean);
+  if(dates.length > 1){
+    // montar série por data
+    const byDate = {};
+    auditRows.forEach(r=>{
+      const d = (r["Data"]||r["DATA"]||r["data"]) || 'sem-data';
+      byDate[d] = byDate[d] || {audit:0, ph:0};
+      byDate[d].audit += Number(r[COLMAP.audit_total] || 0);
+      byDate[d].ph += Number(r[COLMAP.audit_phh] || 0);
+    });
+    const labels = Object.keys(byDate);
+    const auditData = labels.map(l=>byDate[l].audit);
+    const phData = labels.map(l=> (byDate[l].ph) );
+    // checkin: if checkinRows contain daily breakdown, adapt; else create single point (total)
+   const checkByDate = {};
+checkinRows.forEach(r => {
+  const d = r["Data"] || r["data"] || r["DATA"];
+  if (!d) return;
+  const val = Number(r["CONFERIDAS"] || r["CONFERIDAS TOTAL"] || 0);
+  checkByDate[d] = (checkByDate[d] || 0) + val;
+});
 
-function drawCharts(k){
-  // Gráfico 1: Barras Conferidas vs Auditadas
-  // Agrupa Auditadas por Data
-  const auditByDate = {};
-  k.auditRows.forEach(r=>{
-    const d = r[COLMAP.audit_date] || 'Indef';
-    auditByDate[d] = (auditByDate[d] || 0) + cleanNum(r[COLMAP.audit_total]);
-  });
-  
-  // Agrupa Conferidas por Data
-  const checkByDate = {};
-  k.checkinRows.forEach(r=>{
-    const d = r["Data"] || r["data"] || r["DATA"];
-    if(d) checkByDate[d] = (checkByDate[d] || 0) + cleanNum(r["CONFERIDAS"] || r["CONFERIDAS TOTAL"]);
-  });
-
-  // Une as datas para o eixo X
-  const allDates = [...new Set([...Object.keys(auditByDate), ...Object.keys(checkByDate)])].sort();
-  
-  // Monta datasets
-  const dataConf = allDates.map(d => checkByDate[d] || 0);
-  const dataAudit = allDates.map(d => auditByDate[d] || 0);
-  
-  // Desenha Chart 1
-  const ctx = document.getElementById('chart-checkin').getContext('2d');
-  if(chartCheckin) chartCheckin.destroy();
-  chartCheckin = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: allDates,
-      datasets: [
-        { label:'Conferidas', data: dataConf, backgroundColor:'#1976d2' },
-        { label:'Auditadas', data: dataAudit, backgroundColor:'#0b5f3a' }
-      ]
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { position: 'top' },
-        tooltip: {
-          callbacks: {
-            label: function (context) {
-              const val = context.parsed.y;
-              if (context.dataset.label === 'Auditadas') {
-                const conf = dataConf[context.dataIndex];
-                const pct = conf > 0 ? ((val / conf) * 100).toFixed(1) : 0;
-                return `Auditadas: ${val} (${pct}%)`;
-              }
-              return `${context.dataset.label}: ${val}`;
+// Gera array alinhado às datas do gráfico
+const checkinData = labels.map(l => checkByDate[l] || 0);
+    // draw
+    const ctx = document.getElementById('chart-checkin').getContext('2d');
+    if(chartCheckin) chartCheckin.destroy();
+   chartCheckin = new Chart(ctx, {
+  type: 'bar',
+  data: {
+    labels,
+    datasets: [
+      { label:'Conferidas', data: checkinData, backgroundColor:'#1976d2' },
+      { label:'Auditadas', data: auditData, backgroundColor:'#0b5f3a' },
+      { label:'Média Pçs H/H', data: phData, type:'line', borderColor:'gold', tension:0.3, pointRadius:3 }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { position: 'top' },
+      tooltip: {
+        callbacks: {
+          label: function (context) {
+            const datasetLabel = context.dataset.label;
+            const value = context.parsed.y;
+            if (datasetLabel === 'Auditadas') {
+              const i = context.dataIndex;
+              const conferidas = checkinData[i];
+              const pct = conferidas > 0 ? ((value / conferidas) * 100).toFixed(1) : 0;
+              return `${datasetLabel}: ${value.toLocaleString('pt-BR')} (${pct}%)`;
             }
+            return `${datasetLabel}: ${value.toLocaleString('pt-BR')}`;
           }
         }
       }
+    },
+    scales: {
+      y: { beginAtZero: true }
     }
-  });
+  }
+});
 
-  // Gráfico 2: Categorias (Check-in)
+  } else {
+    // single point: mostrar em barras apenas 1 coluna comparativa
+    const labels = [ 'Período' ];
+    const auditData = [ k.totalAuditadas ];
+    const checkData = [ k.totalConferidas ];
+    const phData = [ k.mediaPhh ];
+    const ctx = document.getElementById('chart-checkin').getContext('2d');
+    if(chartCheckin) chartCheckin.destroy();
+    chartCheckin = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { label:'Conferidas', data: checkData, backgroundColor:'#1976d2' },
+          { label:'Auditadas', data: auditData, backgroundColor:'#0b5f3a' },
+          { label:'Média Pçs H/H', data: phData, type:'line', borderColor:'gold', tension:0.3, pointRadius:6, yAxisID:'y1' }
+        ]
+      },
+      options: {
+        responsive:true,
+        scales: {
+          y: { beginAtZero:true, position:'left' },
+          y1: { beginAtZero:true, position:'right', grid:{display:false} }
+        }
+      }
+    });
+  }
+
+  // Chart 2: categorias (checkin)
   const catLabels = ['CALÇADOS','VESTUARIOS','ACESSORIOS','SUPLEMENTOS'];
   const catData = catLabels.map(c=>k.check_categories[c] || 0);
-  
   const ctx2 = document.getElementById('chart-categories').getContext('2d');
   if(chartCats) chartCats.destroy();
   chartCats = new Chart(ctx2, {
     type:'bar',
-    data: { 
-      labels: catLabels, 
-      datasets: [{ label:'Peças', data: catData, backgroundColor:'#8b0000' }] 
-    },
+    data: { labels: catLabels, datasets: [{ label:'Check-in por categoria', data: catData, backgroundColor:'#8b0000' }] },
     options: { responsive:true, plugins:{legend:{display:false}} }
   });
-}
 
-/* --- GRÁFICO HISTÓRICO ANUAL (NOVO) --- */
+  // marcadores extra: dias com <25% auditado - se tivermos daily data
+  // (implementação: se tiver linhas diárias compare auditadas daquele dia contra conferidas totais; aqui deixamos uma nota textual)
+}
+/* ============================================================
+   GRÁFICO ANUAL - USANDO A ABA HISTÓRICO_ANUAL
+   ============================================================ */
 let chartMonthly = null;
 
-async function drawAnnualChart(historyRows) {
-    if(!historyRows || historyRows.length === 0) {
-        console.warn("Sem dados para o histórico anual.");
-        return;
-    }
+async function drawAnnualFromSheet() {
+    const history = await loadAnnualHistory();
 
-    // Mapeando colunas da planilha HISTORICO_ANUAL (Baseado no seu print)
-    // Colunas esperadas: MES, CONFERIDAS, AUDITADAS, % AUDITADAS, NCONF, % NCONF
-    const labels = [];
-    const conferidas = [];
-    const auditadas = [];
-    const pctNconf = [];
-    const pctAuditadasTooltip = [];
-
-    historyRows.forEach(r => {
-        labels.push(r["MES"] || r["mes"]);
-        conferidas.push(cleanNum(r["CONFERIDAS"]));
-        auditadas.push(cleanNum(r["AUDITADAS"]));
-        pctNconf.push(cleanNum(r["% NCONF"]));
-        pctAuditadasTooltip.push(cleanNum(r["% AUDITADAS"]));
-    });
+    const labels = history.map(x => x.mes);
+    const conferidas = history.map(x => x.conferidas);
+    const auditadas = history.map(x => x.auditadas);
+    const pctNconf = history.map(x => x.pctNconf);
 
     const ctx = document.getElementById("chart-monthly").getContext("2d");
     if (chartMonthly) chartMonthly.destroy();
@@ -297,118 +469,98 @@ async function drawAnnualChart(historyRows) {
     chartMonthly = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: labels,
+            labels,
             datasets: [
                 {
-                    label: "Peças Conferidas",
+                    label:"peças conferidas",
                     data: conferidas,
-                    backgroundColor: "#3e73c3",
-                    order: 2,
-                    yAxisID: 'y' // Eixo Esquerdo (Quantidades)
+                    backgroundColor:"#3e73c3"
                 },
                 {
-                    label: "Peças Auditadas",
+                    label:"peças auditadas",
                     data: auditadas,
-                    backgroundColor: "#8ad05b",
-                    order: 3,
-                    yAxisID: 'y' // Eixo Esquerdo (Quantidades)
+                    backgroundColor:"#8ad05b"
                 },
                 {
-                    label: "% Peças Não Conformes",
+                    label:"peças não conformes %",
                     data: pctNconf,
-                    type: "bar", // Pode mudar para 'line' se preferir linha
-                    backgroundColor: "#ff0000",
-                    borderColor: "#ff0000",
-                    borderWidth: 1,
-                    order: 1,
-                    yAxisID: 'y1', // Eixo Direito (Porcentagem)
-                    barPercentage: 0.5 // Barra mais fina
+                    type:"bar",
+                    backgroundColor:"#ff0000",
+                    yAxisID:"y1",
+                    borderWidth:1
                 }
             ]
         },
-        options: {
-            responsive: true,
-            interaction: {
-                mode: 'index',
-                intersect: false,
-            },
-            plugins: {
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            let label = context.dataset.label || '';
-                            if (label) {
-                                label += ': ';
-                            }
-                            if (context.dataset.yAxisID === 'y1') {
-                                label += context.parsed.y + '%';
-                            } else {
-                                label += context.parsed.y.toLocaleString('pt-BR');
-                                // Adiciona % de auditado no tooltip da barra verde
-                                if(context.dataset.label === "Peças Auditadas"){
-                                    const pct = pctAuditadasTooltip[context.dataIndex];
-                                    label += ` (${pct}%)`;
-                                }
-                            }
-                            return label;
+        options:{
+            plugins:{
+                tooltip:{
+                    callbacks:{
+                        afterLabel(ctx){
+                            const h = history[ctx.dataIndex];
+                            return `NCONF: ${h.nconf}`;
                         }
                     }
-                },
-                legend: {
-                    position: 'bottom'
                 }
             },
-            scales: {
-                y: {
-                    type: 'linear',
-                    display: true,
-                    position: 'left',
-                    beginAtZero: true,
-                    title: { display: true, text: 'Quantidade (Peças)' }
-                },
-                y1: {
-                    type: 'linear',
-                    display: true,
-                    position: 'right',
-                    beginAtZero: true,
-                    max: 20, // Ajuste esse máx se a taxa de erro subir muito (ex: 100)
-                    grid: {
-                        drawOnChartArea: false, // remove grades do eixo secundário para limpar o visual
-                    },
-                    ticks: {
-                        callback: function(value) { return value + "%" }
-                    },
-                    title: { display: true, text: '% Não Conforme' }
-                }
+            responsive:true,
+            scales:{
+                y:{ beginAtZero:true },
+                y1:{ beginAtZero:true, position:"right", grid:{display:false} }
             }
         }
     });
 }
 
-/* --- INICIALIZAÇÃO --- */
+/* ============================================================
+   HISTÓRICO ANUAL - LEITURA DA ABA MANUAL
+   ============================================================ */
+async function loadAnnualHistory() {
+    const sheetName = "HISTÓRICO_ANUAL";
+    const url = `${SHEET_URL}&sheet=${sheetName}`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    return data.map(r => ({
+        mes: r["MES"],
+        conferidas: Number(r["CONFERIDAS"] || 0),
+        auditadas: Number(r["AUDITADAS"] || 0),
+        pctAuditadas: Number(String(r["% AUDITADAS"] || "0").replace("%","")),
+        nconf: Number(r["NCONF"] || 0),
+        pctNconf: Number(String(r["% NCONF"] || "0").replace("%",""))
+    }));
+}
+	
+/* MAIN */
 async function init(){
+  if(!SHEET_ID || SHEET_ID.includes("COLE_AQUI")){
+    document.body.innerHTML = "<div style='padding:40px;font-size:18px;color:#900'>Cole o ID da planilha (SHEET_ID) no código antes de usar. Veja instruções no topo do arquivo.</div>";
+    return;
+  }
+
   try{
-    // Carrega dados das 4 abas
-    const [auditRows, checkinRows, ncrRows, historyRows] = await Promise.all([
-      fetchCsvAsJson(gsheetCsvUrl(SHEET_NAMES.audit)),
-      fetchCsvAsJson(gsheetCsvUrl(SHEET_NAMES.checkin)),
-      fetchCsvAsJson(gsheetCsvUrl(SHEET_NAMES.ncr)),
-      fetchCsvAsJson(gsheetCsvUrl(SHEET_NAMES.history))
+    const urlAudit = gsheetCsvUrl(SHEET_NAMES.audit);
+    const urlCheckin = gsheetCsvUrl(SHEET_NAMES.checkin);
+    const urlNcr = gsheetCsvUrl(SHEET_NAMES.ncr);
+
+    const [auditRows, checkinRows, ncrRows] = await Promise.all([
+      fetchCsvAsJson(urlAudit),
+      fetchCsvAsJson(urlCheckin),
+      fetchCsvAsJson(urlNcr)
     ]);
 
-    // Processa Dashboard Diário
     const k = computeKpis(auditRows, checkinRows, ncrRows);
     renderKpis(k);
-    drawCharts(k);
-    
-    // Processa Gráfico Anual
-    drawAnnualChart(historyRows);
+    drawCharts(k, auditRows, checkinRows, ncrRows);
+    drawAnnualFromSheet();
+
 
   } catch(err){
     console.error(err);
-    document.body.insertAdjacentHTML('beforeend', `<div style="margin-top:16px;color:#900;background:#fee;padding:10px">Erro ao carregar dados. Verifique se o nome das abas e o ID da planilha estão corretos.<br>Detalhe: ${err.message || err}</div>`);
+    document.body.insertAdjacentHTML('beforeend', `<div style="margin-top:16px;color:#900">Erro ao carregar dados: ${err.message || err}</div>`);
   }
 }
 
 init();
 </script>
+</body>
+</html>
