@@ -163,7 +163,9 @@
   - Se mudar nomes das abas, atualize SHEET_NAMES
   - Atenção para nomes de colunas com espaços extras (ex.: "fotos ")
 */
-const SHEET_ID = "1RisWgpsGELH184pSKGB77axrCd7xMfVdBkeK3_HGWP0";
+const SHEET_ID = "
+	
+	";
 const SHEET_NAMES = {
   audit: "1",     // Nome da aba de auditoria
   checkin: "2",   // Nome da aba de checkin
@@ -576,7 +578,7 @@ function processAndDrawHistory(historyRows) {
 	
 /* MAIN */
 async function init(){
-  if(!SHEET_ID || SHEET_ID.includes("COLE_AQUI")){
+  if(!SHEET_ID || SHEET_ID.includes("1RisWgpsGELH184pSKGB77axrCd7xMfVdBkeK3_HGWP0")){
     document.body.innerHTML = "<div style='padding:40px;font-size:18px;color:#900'>Cole o ID da planilha (SHEET_ID) no código antes de usar. Veja instruções no topo do arquivo.</div>";
     return;
   }
