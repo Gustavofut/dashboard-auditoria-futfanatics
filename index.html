@@ -165,9 +165,10 @@
 */
 const SHEET_ID = "1RisWgpsGELH184pSKGB77axrCd7xMfVdBkeK3_HGWP0";
 const SHEET_NAMES = {
-  audit: "1",
-  checkin: "2",
-  ncr: "3"
+  audit: "1",     // Nome da aba de auditoria
+  checkin: "2",   // Nome da aba de checkin
+  ncr: "3",       // Nome da aba de não conformidade
+  history: "HISTORICO_ANUAL" // <--- NOVA ABA ADICIONADA AQUI
 };
 /* Se algum cabeçalho tiver variação, mapeie aqui (nomes exatos das colunas no google sheet) */
 const COLMAP = {
@@ -455,79 +456,122 @@ const checkinData = labels.map(l => checkByDate[l] || 0);
    ============================================================ */
 let chartMonthly = null;
 
-async function drawAnnualFromSheet() {
-    const history = await loadAnnualHistory();
-
-    const labels = history.map(x => x.mes);
-    const conferidas = history.map(x => x.conferidas);
-    const auditadas = history.map(x => x.auditadas);
-    const pctNconf = history.map(x => x.pctNconf);
-
-    const ctx = document.getElementById("chart-monthly").getContext("2d");
-    if (chartMonthly) chartMonthly.destroy();
-
-    chartMonthly = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels,
-            datasets: [
-                {
-                    label:"peças conferidas",
-                    data: conferidas,
-                    backgroundColor:"#3e73c3"
-                },
-                {
-                    label:"peças auditadas",
-                    data: auditadas,
-                    backgroundColor:"#8ad05b"
-                },
-                {
-                    label:"peças não conformes %",
-                    data: pctNconf,
-                    type:"bar",
-                    backgroundColor:"#ff0000",
-                    yAxisID:"y1",
-                    borderWidth:1
-                }
-            ]
-        },
-        options:{
-            plugins:{
-                tooltip:{
-                    callbacks:{
-                        afterLabel(ctx){
-                            const h = history[ctx.dataIndex];
-                            return `NCONF: ${h.nconf}`;
-                        }
-                    }
-                }
-            },
-            responsive:true,
-            scales:{
-                y:{ beginAtZero:true },
-                y1:{ beginAtZero:true, position:"right", grid:{display:false} }
-            }
-        }
-    });
-}
-
 /* ============================================================
-   HISTÓRICO ANUAL - LEITURA DA ABA MANUAL
+   FUNÇÃO NOVA: GRÁFICO HISTÓRICO MENSAL (Visual da Imagem)
    ============================================================ */
-async function loadAnnualHistory() {
-    const sheetName = "HISTÓRICO_ANUAL";
-    const url = `${SHEET_URL}&sheet=${sheetName}`;
-    const res = await fetch(url);
-    const data = await res.json();
+let chartMonthly = null;
 
-    return data.map(r => ({
-        mes: r["MES"],
-        conferidas: Number(r["CONFERIDAS"] || 0),
-        auditadas: Number(r["AUDITADAS"] || 0),
-        pctAuditadas: Number(String(r["% AUDITADAS"] || "0").replace("%","")),
-        nconf: Number(r["NCONF"] || 0),
-        pctNconf: Number(String(r["% NCONF"] || "0").replace("%",""))
-    }));
+function processAndDrawHistory(historyRows) {
+  // 1. Tratamento de dados
+  const labels = [];
+  const dataConf = [];
+  const dataAud = [];
+  const dataNconf = [];
+
+  // Helper para limpar numeros (ex: "1.000,00" -> 1000.00 ou "0,5%" -> 0.5)
+  const parseNumber = (v) => {
+    if (!v) return 0;
+    let s = String(v).replace('%', '').trim(); // tira % e espaços
+    // Se tiver ponto como milhar e virgula como decimal (padrão BR):
+    if (s.includes(',') && s.includes('.')) {
+        s = s.replace(/\./g, '').replace(',', '.');
+    } else if (s.includes(',')) {
+        s = s.replace(',', '.');
+    }
+    return parseFloat(s) || 0;
+  };
+
+  historyRows.forEach(row => {
+    // Pega as colunas pelo nome exato do CSV
+    if (!row["MES"]) return; // ignora linha vazia
+    labels.push(row["MES"]);
+    dataConf.push(parseNumber(row["CONFERIDAS"]));
+    dataAud.push(parseNumber(row["AUDITADAS"]));
+    dataNconf.push(parseNumber(row["PCT_NCONF"]));
+  });
+
+  // 2. Configuração do Gráfico Estilo "Barras Sobrepostas"
+  const ctx = document.getElementById("chart-monthly").getContext("2d");
+  if (chartMonthly) chartMonthly.destroy();
+
+  chartMonthly = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Peças Conferidas',
+          data: dataConf,
+          backgroundColor: '#3e73c3', // Azul (Fundo)
+          order: 3,                   // Fica atrás
+          barPercentage: 0.8,         // Barra Larga
+          categoryPercentage: 0.9,
+          yAxisID: 'y'
+        },
+        {
+          label: 'Peças Auditadas',
+          data: dataAud,
+          backgroundColor: '#8ad05b', // Verde (Meio)
+          order: 2,                   // Fica no meio
+          barPercentage: 0.5,         // Barra Média (dentro da azul)
+          yAxisID: 'y'
+        },
+        {
+          label: 'Não Conforme %',
+          data: dataNconf,
+          backgroundColor: '#ff0000', // Vermelho (Frente)
+          order: 1,                   // Fica na frente de tudo
+          barPercentage: 0.15,        // Barra fina
+          yAxisID: 'y1'               // Eixo da direita (porcentagem)
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: {
+          stacked: true, // Isso centraliza as barras uma na outra
+        },
+        y: {
+          beginAtZero: true,
+          type: 'linear',
+          position: 'left',
+          title: { display: true, text: 'Quantidade de Peças' }
+        },
+        y1: {
+          beginAtZero: true,
+          type: 'linear',
+          position: 'right',
+          grid: { display: false }, // esconde grade do eixo secundario
+          title: { display: true, text: '% Não Conforme' },
+          // Sugestão: fixar maximo baixo para a barra vermelha não explodir
+          // max: 5 
+        }
+      },
+      plugins: {
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          callbacks: {
+            label: function(context) {
+               let label = context.dataset.label || '';
+               if (label) label += ': ';
+               let val = context.parsed.y;
+               // Se for o eixo de porcentagem (y1) adiciona %
+               if (context.dataset.yAxisID === 'y1') {
+                 return label + val.toFixed(2) + '%';
+               }
+               return label + val.toLocaleString('pt-BR');
+            }
+          }
+        },
+        legend: {
+           position: 'bottom'
+        }
+      }
+    }
+  });
 }
 	
 /* MAIN */
@@ -537,28 +581,33 @@ async function init(){
     return;
   }
 
-  try{
+ try{
+    // URLs das abas
     const urlAudit = gsheetCsvUrl(SHEET_NAMES.audit);
     const urlCheckin = gsheetCsvUrl(SHEET_NAMES.checkin);
     const urlNcr = gsheetCsvUrl(SHEET_NAMES.ncr);
+    const urlHistory = gsheetCsvUrl(SHEET_NAMES.history); // Nova URL
 
-    const [auditRows, checkinRows, ncrRows] = await Promise.all([
+    // Baixar tudo junto (Promise.all)
+    const [auditRows, checkinRows, ncrRows, historyRows] = await Promise.all([
       fetchCsvAsJson(urlAudit),
       fetchCsvAsJson(urlCheckin),
-      fetchCsvAsJson(urlNcr)
+      fetchCsvAsJson(urlNcr),
+      fetchCsvAsJson(urlHistory) // Novo download
     ]);
 
+    // 1. KPIs Gerais e Gráficos Diários
     const k = computeKpis(auditRows, checkinRows, ncrRows);
     renderKpis(k);
     drawCharts(k, auditRows, checkinRows, ncrRows);
-    drawAnnualFromSheet();
 
+    // 2. Gráfico da Linha do Tempo (Novo)
+    processAndDrawHistory(historyRows);
 
   } catch(err){
     console.error(err);
     document.body.insertAdjacentHTML('beforeend', `<div style="margin-top:16px;color:#900">Erro ao carregar dados: ${err.message || err}</div>`);
   }
-}
 
 init();
 </script>
