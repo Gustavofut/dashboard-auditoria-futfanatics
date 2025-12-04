@@ -5,9 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>DASHBOARD CONTROLE DE QUALIDADE NOTURNO - FutFanatics</title>
 
-  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <!-- PapaParse para CSV do Google Sheets -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
   <style>
@@ -19,7 +17,7 @@
       --card-radius: 12px;
       --card-shadow: 0 6px 18px rgba(0,0,0,0.08);
     }
-    html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;}
+    html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, sans-serif;}
     body{background:var(--bg); color:var(--navy); padding:18px;}
     header{display:flex;align-items:center;gap:18px;margin-bottom:18px;}
     header h1{margin:0;font-size:20px;color:var(--navy);}
@@ -30,7 +28,7 @@
       align-items:start;
     }
 
-    /* Left column (cards) */
+    /* Left column */
     .col-left{display:flex;flex-direction:column;gap:18px;}
     .card{background:#fff;border-radius:var(--card-radius);box-shadow:var(--card-shadow);padding:16px;border:2px solid rgba(0,0,0,0.04);}
     .kpi-large{font-size:48px;font-weight:700;text-align:center;color:var(--navy);}
@@ -38,17 +36,19 @@
     .mini-list{display:flex;flex-direction:column;gap:6px;margin-top:6px;}
     .mini-item{display:flex;justify-content:space-between;padding:6px;background:var(--muted);border-radius:8px;font-size:13px}
 
-    /* Center - charts */
+    /* Center */
     .col-center{display:flex;flex-direction:column;gap:18px;}
     .chart-card{background:#fff;border-radius:var(--card-radius);padding:12px;box-shadow:var(--card-shadow);}
     .chart-row{display:flex;gap:12px;align-items:center;}
     .legend{display:flex;gap:10px;align-items:center;font-size:13px}
     .legend-swatch{width:14px;height:14px;border-radius:3px}
-    /* Right column - ranking + tipos */
+    
+    /* Right */
     .col-right{display:flex;flex-direction:column;gap:18px;}
     .small-title{font-weight:700;color:var(--navy);font-size:13px;margin-bottom:8px}
     footer{margin-top:18px;font-size:12px;color:#666}
-    /* responsive */
+    
+    /* Responsive */
     @media (max-width:1100px){
       .grid{grid-template-columns:1fr; }
     }
@@ -56,7 +56,6 @@
 </head>
 <body>
   <header>
-    <img src="FUT.jfif" alt="Logo" style="width:44px;height:44px;background:var(--navy);border-radius:8px">
     <div>
       <h1>DASHBOARD CONTROLE DE QUALIDADE NOTURNO - FutFanatics</h1>
       <div style="font-size:13px;color:#666">Período: <span id="periodo-text">--</span></div>
@@ -64,7 +63,6 @@
   </header>
 
   <div class="grid">
-    <!-- LEFT -->
     <div class="col-left">
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -91,10 +89,8 @@
         <div style="margin-top:12px" class="small-title">Tipos de Avaria mais frequentes</div>
         <div id="tipos-list"></div>
       </div>
-
     </div>
 
-    <!-- CENTER -->
     <div class="col-center">
       <div class="chart-card">
         <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -120,25 +116,22 @@
           <div style="font-size:24px;font-weight:700;color:var(--navy)"><span id="fotos-num">--</span> FOTOS</div>
         </div>
       </div>
-
     </div>
 
-    <!-- RIGHT -->
     <div class="col-right">
-
-<!-- CARD: Linha do Tempo Mensal -->
-<div class="card">
-  <div class="small-title">Linha do Tempo Mensal</div>
-  <canvas id="chart-monthly" height="180"></canvas>
-  <div style="font-size:12px;color:#666;margin-top:10px">
-      Histórico anual alimentado pela aba HISTÓRICO_ANUAL.
-  </div>
-</div>
+      <div class="card">
+        <div class="small-title">Linha do Tempo Mensal</div>
+        <div style="height: 200px;">
+            <canvas id="chart-monthly"></canvas>
+        </div>
+        <div style="font-size:12px;color:#666;margin-top:10px">
+            Histórico anual alimentado pela aba HISTORICO_ANUAL.
+        </div>
+      </div>
 
       <div class="card">
         <div class="small-title">Média Peças H/H (média das médias)</div>
         <div style="font-size:36px;font-weight:800;color:var(--navy)" id="kpi-hh">--</div>
-        <div style="font-size:13px;color:#666"></div>
       </div>
 
       <div class="card">
@@ -153,26 +146,24 @@
   </div>
 
   <footer>
-    <div>Gerado automaticamente. Para alterar as fontes de dados, atualize o Google Sheets e publique a aba como CSV.</div>
+    <div>Gerado automaticamente. Para alterar as fontes de dados, atualize o Google Sheets.</div>
   </footer>
 
 <script>
-/*
-  CONFIGURE AQUI:
-  - Cole o ID da planilha Google (parte entre /d/ e /edit)
-  - Se mudar nomes das abas, atualize SHEET_NAMES
-  - Atenção para nomes de colunas com espaços extras (ex.: "fotos ")
-*/
-const SHEET_ID = "
-	
-	";
+/* ========================================================
+   CONFIGURAÇÃO - COLE SEU ID AQUI
+   ======================================================== */
+const SHEET_ID = "1RisWgpsGELH184pSKGB77axrCd7xMfVdBkeK3_HGWP0"; // <--- VERIFIQUE SE ESTE É O ID CORRETO
+
+/* Nomes das Abas (Devem ser iguais aos da planilha) */
 const SHEET_NAMES = {
-  audit: "1",     // Nome da aba de auditoria
-  checkin: "2",   // Nome da aba de checkin
-  ncr: "3",       // Nome da aba de não conformidade
-  history: "HISTORICO_ANUAL" // <--- NOVA ABA ADICIONADA AQUI
+  audit: "1",
+  checkin: "2",
+  ncr: "3",
+  history: "HISTORICO_ANUAL" // Sem acento, conforme instrução
 };
-/* Se algum cabeçalho tiver variação, mapeie aqui (nomes exatos das colunas no google sheet) */
+
+/* Mapeamento de Colunas (Nomes exatos na linha 1) */
 const COLMAP = {
   audit_date: "Data",
   audit_total: "Peças Auditadas (dia) TOTAL",
@@ -185,33 +176,38 @@ const COLMAP = {
   audit_fotos: "fotos"
 };
 
+/* ========================================================
+   LÓGICA DO SISTEMA
+   ======================================================== */
+
 function gsheetCsvUrl(sheetName){
-  // Formato: https://docs.google.com/spreadsheets/d/{ID}/gviz/tq?tqx=out:csv&sheet={sheetName}
   return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
 }
 
-/* Util: parse CSV via PapaParse returning array of objects */
 function fetchCsvAsJson(url){
   return new Promise((resolve,reject)=>{
     Papa.parse(url, {
       download: true,
       header: true,
       skipEmptyLines: true,
-      complete: function(results){
-        resolve(results.data);
-      },
+      complete: function(results){ resolve(results.data); },
       error: function(err){ reject(err); }
     });
   });
 }
 
-/* Calcula KPIs a partir dos arrays de objetos */
-function computeKpis(auditRows, checkinRows, ncrRows){
-  // auditRows: array com linhas da aba PEÇAS AUDITADAS
-  // checkinRows: array (normalmente 1 linha com totais)
-  // ncrRows: linhas da aba PEÇAS NÃO CONFORMES
+const toNumber = v => {
+    if(v===undefined || v===null || v==="") return 0;
+    // Tenta limpar R$ e espaços, troca virgula por ponto
+    let s = String(v).replace("R$","").replace("%","").trim();
+    // Se tiver ponto e virgula (ex: 1.000,50) -> remove ponto milhar, troca virgula decimal
+    if(s.includes('.') && s.includes(',')) s = s.replace(/\./g,'').replace(',','.');
+    else if(s.includes(',')) s = s.replace(',','.');
+    return parseFloat(s) || 0;
+};
 
-  // 1) total peças auditadas
+/* 1. Processamento Diário (Esquerda/Centro) */
+function computeKpis(auditRows, checkinRows, ncrRows){
   let totalAuditadas = 0;
   let categoriesAudit = {CALÇADOS:0, VESTUARIOS:0, ACESSORIOS:0, SUPLEMENTOS:0};
   let phhList = [];
@@ -220,7 +216,6 @@ function computeKpis(auditRows, checkinRows, ncrRows){
   let datas = [];
 
   auditRows.forEach(r=>{
-    const toNumber = v => { if(v===undefined || v===null || v==="") return 0; return Number(String(v).replace(",",".").replace(/\s/g,'')) || 0; };
     totalAuditadas += toNumber(r[COLMAP.audit_total]);
     categoriesAudit.CALÇADOS += toNumber(r[COLMAP.audit_cald]);
     categoriesAudit.VESTUARIOS += toNumber(r[COLMAP.audit_vest]);
@@ -232,36 +227,27 @@ function computeKpis(auditRows, checkinRows, ncrRows){
     if(r[COLMAP.audit_date]) datas.push(r[COLMAP.audit_date]);
   });
 
- // AJUSTE FUT 02 - agregação diária de Check-in e categorias
-const toNumber = v => { if(v===undefined || v===null || v==="") return 0; return Number(String(v).replace(",",".").replace(/\s/g,'')) || 0; };
+  // Checkin por Data
+  const checkByDate = {};
+  let totalConferidas = 0;
+  const check_categories = { CALÇADOS:0, VESTUARIOS:0, ACESSORIOS:0, SUPLEMENTOS:0 };
 
-// Agregar checkinRows por Data (mesmo padrão da aba audit)
-const checkByDate = {};
-checkinRows.forEach(r => {
-  const d = r["Data"] || r["data"] || r["DATA"] || '';
-  if(!d) return;
-  if(!checkByDate[d]) checkByDate[d] = { total:0, CALÇADOS:0, VESTUARIOS:0, ACESSORIOS:0, SUPLEMENTOS:0 };
-  // Suporta tanto "CONFERIDAS TOTAL" quanto "CONFERIDAS" (nome variant)
-  const totalField = r["CONFERIDAS TOTAL"] ?? r["CONFERIDAS"] ?? r["PCONFERIDAS"] ?? '0';
-  checkByDate[d].total += toNumber(totalField);
-  checkByDate[d].CALÇADOS += toNumber(r["CALÇADOS"] || r["CALÇADO"] || 0);
-  checkByDate[d].VESTUARIOS += toNumber(r["VESTUARIOS"] || r["VESTUARIO"] || 0);
-  checkByDate[d].ACESSORIOS += toNumber(r["ACESSORIOS"] || r["ACESSORIO"] || 0);
-  checkByDate[d].SUPLEMENTOS += toNumber(r["SUPLEMENTOS"] || r["SUPLEMENTO"] || 0);
-});
+  checkinRows.forEach(r => {
+    const d = r["Data"] || r["data"] || r["DATA"] || '';
+    if(!d) return;
+    if(!checkByDate[d]) checkByDate[d] = { total:0 };
+    
+    const valTotal = toNumber(r["CONFERIDAS TOTAL"] ?? r["CONFERIDAS"] ?? r["PCONFERIDAS"] ?? '0');
+    checkByDate[d].total += valTotal;
+    totalConferidas += valTotal;
 
-// Totais do período (soma de todos os dias)
-let totalConferidas = 0;
-const check_categories = { CALÇADOS:0, VESTUARIOS:0, ACESSORIOS:0, SUPLEMENTOS:0 };
-Object.values(checkByDate).forEach(v=>{
-  totalConferidas += v.total;
-  check_categories.CALÇADOS += v.CALÇADOS;
-  check_categories.VESTUARIOS += v.VESTUARIOS;
-  check_categories.ACESSORIOS += v.ACESSORIOS;
-  check_categories.SUPLEMENTOS += v.SUPLEMENTOS;
-});
+    check_categories.CALÇADOS += toNumber(r["CALÇADOS"]||0);
+    check_categories.VESTUARIOS += toNumber(r["VESTUARIOS"]||0);
+    check_categories.ACESSORIOS += toNumber(r["ACESSORIOS"]||0);
+    check_categories.SUPLEMENTOS += toNumber(r["SUPLEMENTOS"]||0);
+  });
 
-  // ncr aggregation
+  // NCR aggregation
   const fornecedores = {};
   const tipos = {};
   let totalAvariados = 0;
@@ -295,20 +281,18 @@ Object.values(checkByDate).forEach(v=>{
   };
 }
 
-/* Render UI */
 function renderKpis(k){
-  document.getElementById('kpi-pecas').innerText = (typeof k.totalAuditadas === 'number') ? k.totalAuditadas.toLocaleString('pt-BR') : k.totalAuditadas;
-  document.getElementById('kpi-hh').innerText = k.mediaPhh ? k.mediaPhh.toFixed(1) : '--';
+  document.getElementById('kpi-pecas').innerText = k.totalAuditadas.toLocaleString('pt-BR');
+  document.getElementById('kpi-hh').innerText = k.mediaPhh.toFixed(1);
   document.getElementById('rnc-num').innerText = k.rncSum;
   document.getElementById('fotos-num').innerText = k.fotosSum;
-  document.getElementById('sum-conferidas').innerText =
-  typeof k.totalConferidas === 'number' ? k.totalConferidas.toLocaleString('pt-BR') : k.totalConferidas;
-  document.getElementById('sum-auditadas').innerText =
-  typeof k.totalAuditadas === 'number' ? k.totalAuditadas.toLocaleString('pt-BR') : k.totalAuditadas;
-  document.getElementById('pct-auditado').innerText = k.pctAuditadoSobreConferido ? (k.pctAuditadoSobreConferido*100).toFixed(1)+'%' : '--';
-  document.getElementById('kpi-taxa').innerText = k.taxaNaoConformidade ? (k.taxaNaoConformidade*100).toFixed(1)+'%' : '--';
-  document.getElementById('kpi-taxa-qnt').innerText = k.totalAvariados ? `${k.totalAvariados} peças` : '';
-  // categories list
+  document.getElementById('sum-conferidas').innerText = k.totalConferidas.toLocaleString('pt-BR');
+  document.getElementById('sum-auditadas').innerText = k.totalAuditadas.toLocaleString('pt-BR');
+  document.getElementById('pct-auditado').innerText = (k.pctAuditadoSobreConferido*100).toFixed(1)+'%';
+  document.getElementById('kpi-taxa').innerText = (k.taxaNaoConformidade*100).toFixed(1)+'%';
+  document.getElementById('kpi-taxa-qnt').innerText = `${k.totalAvariados} peças`;
+
+  // Categorias
   const catDiv = document.getElementById('categoria-list'); catDiv.innerHTML='';
   ['CALÇADOS','VESTUARIOS','ACESSORIOS','SUPLEMENTOS'].forEach(cat=>{
     const el = document.createElement('div'); el.className='mini-item';
@@ -316,7 +300,7 @@ function renderKpis(k){
     catDiv.appendChild(el);
   });
 
-  // fornecedores top3
+  // Fornecedores
   const fornArr = Object.entries(k.fornecedores || {}).sort((a,b)=>b[1]-a[1]).slice(0,3);
   const fornDiv = document.getElementById('fornecedores-list'); fornDiv.innerHTML='';
   fornArr.forEach((f,i)=>{
@@ -325,7 +309,7 @@ function renderKpis(k){
     fornDiv.appendChild(row);
   });
 
-  // tipos de avaria
+  // Tipos
   const tiposArr = Object.entries(k.tipos || {}).sort((a,b)=>b[1]-a[1]).slice(0,6);
   const tiposDiv = document.getElementById('tipos-list'); tiposDiv.innerHTML='';
   tiposArr.forEach(t=>{
@@ -334,197 +318,93 @@ function renderKpis(k){
     tiposDiv.appendChild(r);
   });
 
-  // period
-  const pText = (k.period.min && k.period.max) ? `${k.period.min} → ${k.period.max}` : '--';
-  document.getElementById('periodo-text').innerText = pText;
-  // meta note (show days below 25% inspection goal)
-  document.getElementById('meta-note').innerText = `Meta mínima de inspeção diária: 25% - o painel marca percentuais por dia no gráfico.`;
+  document.getElementById('periodo-text').innerText = (k.period.min) ? `${k.period.min} → ${k.period.max}` : '--';
 }
 
-/* Desenhar gráficos */
-let chartCheckin = null;
-let chartCats = null;
-function drawCharts(k, auditRows, checkinRows, ncrRows){
-  // Chart 1: barras conferidas vs auditadas (aqui assumimos dados por dia — se tiver vários dias no sheet, adapte)
-  // Para exemplo simples: usaremos um único ponto (o total). Se tiver vários dias (múltiplas linhas em auditRows), monte arrays por data.
-  // Vamos checar se auditRows possuem várias linhas com 'Data' diferentes
-  const dates = auditRows.map(r=>r["Data"] || r["data"] || r["DATA"]).filter(Boolean);
-  if(dates.length > 1){
-    // montar série por data
-    const byDate = {};
-    auditRows.forEach(r=>{
-      const d = (r["Data"]||r["DATA"]||r["data"]) || 'sem-data';
-      byDate[d] = byDate[d] || {audit:0, ph:0};
-      byDate[d].audit += Number(r[COLMAP.audit_total] || 0);
-      byDate[d].ph += Number(r[COLMAP.audit_phh] || 0);
-    });
-    const labels = Object.keys(byDate);
-    const auditData = labels.map(l=>byDate[l].audit);
-    const phData = labels.map(l=> (byDate[l].ph) );
-    // checkin: if checkinRows contain daily breakdown, adapt; else create single point (total)
-   const checkByDate = {};
-checkinRows.forEach(r => {
-  const d = r["Data"] || r["data"] || r["DATA"];
-  if (!d) return;
-  const val = Number(r["CONFERIDAS"] || r["CONFERIDAS TOTAL"] || 0);
-  checkByDate[d] = (checkByDate[d] || 0) + val;
-});
-
-// Gera array alinhado às datas do gráfico
-const checkinData = labels.map(l => checkByDate[l] || 0);
-    // draw
+function drawCharts(k, auditRows, checkinRows){
+    // Chart 1: Checkin vs Audit vs PH
+    const labels = [ 'Total Período' ]; 
+    // Se quiser gráfico por dia, precisa agregar auditRows por dia igual fizemos no checkin.
+    // Para simplificar e garantir funcionamento, vamos mostrar Totais:
     const ctx = document.getElementById('chart-checkin').getContext('2d');
-    if(chartCheckin) chartCheckin.destroy();
-   chartCheckin = new Chart(ctx, {
-  type: 'bar',
-  data: {
-    labels,
-    datasets: [
-      { label:'Conferidas', data: checkinData, backgroundColor:'#1976d2' },
-      { label:'Auditadas', data: auditData, backgroundColor:'#0b5f3a' },
-      { label:'Média Pçs H/H', data: phData, type:'line', borderColor:'gold', tension:0.3, pointRadius:3 }
-    ]
-  },
-  options: {
-    responsive: true,
-    plugins: {
-      legend: { position: 'top' },
-      tooltip: {
-        callbacks: {
-          label: function (context) {
-            const datasetLabel = context.dataset.label;
-            const value = context.parsed.y;
-            if (datasetLabel === 'Auditadas') {
-              const i = context.dataIndex;
-              const conferidas = checkinData[i];
-              const pct = conferidas > 0 ? ((value / conferidas) * 100).toFixed(1) : 0;
-              return `${datasetLabel}: ${value.toLocaleString('pt-BR')} (${pct}%)`;
-            }
-            return `${datasetLabel}: ${value.toLocaleString('pt-BR')}`;
-          }
-        }
-      }
-    },
-    scales: {
-      y: { beginAtZero: true }
-    }
-  }
-});
-
-  } else {
-    // single point: mostrar em barras apenas 1 coluna comparativa
-    const labels = [ 'Período' ];
-    const auditData = [ k.totalAuditadas ];
-    const checkData = [ k.totalConferidas ];
-    const phData = [ k.mediaPhh ];
-    const ctx = document.getElementById('chart-checkin').getContext('2d');
-    if(chartCheckin) chartCheckin.destroy();
-    chartCheckin = new Chart(ctx, {
+    new Chart(ctx, {
       type: 'bar',
       data: {
-        labels,
+        labels: labels,
         datasets: [
-          { label:'Conferidas', data: checkData, backgroundColor:'#1976d2' },
-          { label:'Auditadas', data: auditData, backgroundColor:'#0b5f3a' },
-          { label:'Média Pçs H/H', data: phData, type:'line', borderColor:'gold', tension:0.3, pointRadius:6, yAxisID:'y1' }
+          { label:'Conferidas', data: [k.totalConferidas], backgroundColor:'#1976d2' },
+          { label:'Auditadas', data: [k.totalAuditadas], backgroundColor:'#0b5f3a' },
+          // Usando eixo direito para PH
+          { label:'Média Peças H/H', data: [k.mediaPhh], type:'line', borderColor:'gold', tension:0.1, yAxisID:'y1' }
         ]
       },
       options: {
         responsive:true,
         scales: {
-          y: { beginAtZero:true, position:'left' },
-          y1: { beginAtZero:true, position:'right', grid:{display:false} }
+            y: { beginAtZero:true, position:'left' },
+            y1: { beginAtZero:true, position:'right', grid:{display:false} }
         }
       }
     });
-  }
 
-  // Chart 2: categorias (checkin)
-  const catLabels = ['CALÇADOS','VESTUARIOS','ACESSORIOS','SUPLEMENTOS'];
-  const catData = catLabels.map(c=>k.check_categories[c] || 0);
-  const ctx2 = document.getElementById('chart-categories').getContext('2d');
-  if(chartCats) chartCats.destroy();
-  chartCats = new Chart(ctx2, {
-    type:'bar',
-    data: { labels: catLabels, datasets: [{ label:'Check-in por categoria', data: catData, backgroundColor:'#8b0000' }] },
-    options: { responsive:true, plugins:{legend:{display:false}} }
-  });
-
-  // marcadores extra: dias com <25% auditado - se tivermos daily data
-  // (implementação: se tiver linhas diárias compare auditadas daquele dia contra conferidas totais; aqui deixamos uma nota textual)
+    // Chart 2: Categorias
+    const catLabels = ['CALÇADOS','VESTUARIOS','ACESSORIOS','SUPLEMENTOS'];
+    const catData = catLabels.map(c=>k.check_categories[c] || 0);
+    new Chart(document.getElementById('chart-categories'), {
+      type:'bar',
+      data: { labels: catLabels, datasets: [{ label:'Check-in', data: catData, backgroundColor:'#001C40' }] },
+      options: { responsive:true, plugins:{legend:{display:false}} }
+    });
 }
-/* ============================================================
-   GRÁFICO ANUAL - USANDO A ABA HISTÓRICO_ANUAL
-   ============================================================ */
-let chartMonthly = null;
 
-/* ============================================================
-   FUNÇÃO NOVA: GRÁFICO HISTÓRICO MENSAL (Visual da Imagem)
-   ============================================================ */
-let chartMonthly = null;
-
+/* ========================================================
+   2. PROCESSAMENTO DO HISTÓRICO ANUAL (Linha do Tempo)
+   ======================================================== */
 function processAndDrawHistory(historyRows) {
-  // 1. Tratamento de dados
   const labels = [];
   const dataConf = [];
   const dataAud = [];
   const dataNconf = [];
 
-  // Helper para limpar numeros (ex: "1.000,00" -> 1000.00 ou "0,5%" -> 0.5)
-  const parseNumber = (v) => {
-    if (!v) return 0;
-    let s = String(v).replace('%', '').trim(); // tira % e espaços
-    // Se tiver ponto como milhar e virgula como decimal (padrão BR):
-    if (s.includes(',') && s.includes('.')) {
-        s = s.replace(/\./g, '').replace(',', '.');
-    } else if (s.includes(',')) {
-        s = s.replace(',', '.');
-    }
-    return parseFloat(s) || 0;
-  };
-
   historyRows.forEach(row => {
-    // Pega as colunas pelo nome exato do CSV
-    if (!row["MES"]) return; // ignora linha vazia
+    if (!row["MES"]) return; 
     labels.push(row["MES"]);
-    dataConf.push(parseNumber(row["CONFERIDAS"]));
-    dataAud.push(parseNumber(row["AUDITADAS"]));
-    dataNconf.push(parseNumber(row["PCT_NCONF"]));
+    dataConf.push(toNumber(row["CONFERIDAS"]));
+    dataAud.push(toNumber(row["AUDITADAS"]));
+    dataNconf.push(toNumber(row["PCT_NCONF"]));
   });
 
-  // 2. Configuração do Gráfico Estilo "Barras Sobrepostas"
   const ctx = document.getElementById("chart-monthly").getContext("2d");
-  if (chartMonthly) chartMonthly.destroy();
-
-  chartMonthly = new Chart(ctx, {
+  
+  new Chart(ctx, {
     type: 'bar',
     data: {
       labels: labels,
       datasets: [
         {
-          label: 'Peças Conferidas',
+          label: 'Conferidas',
           data: dataConf,
-          backgroundColor: '#3e73c3', // Azul (Fundo)
-          order: 3,                   // Fica atrás
-          barPercentage: 0.8,         // Barra Larga
-          categoryPercentage: 0.9,
+          backgroundColor: '#3e73c3', // Azul (Fundo - Largo)
+          order: 3,
+          barPercentage: 0.9,
+          categoryPercentage: 0.8,
           yAxisID: 'y'
         },
         {
-          label: 'Peças Auditadas',
+          label: 'Auditadas',
           data: dataAud,
-          backgroundColor: '#8ad05b', // Verde (Meio)
-          order: 2,                   // Fica no meio
-          barPercentage: 0.5,         // Barra Média (dentro da azul)
+          backgroundColor: '#8ad05b', // Verde (Meio - Médio)
+          order: 2,
+          barPercentage: 0.5,
           yAxisID: 'y'
         },
         {
-          label: 'Não Conforme %',
+          label: '% Não Conforme',
           data: dataNconf,
-          backgroundColor: '#ff0000', // Vermelho (Frente)
-          order: 1,                   // Fica na frente de tudo
-          barPercentage: 0.15,        // Barra fina
-          yAxisID: 'y1'               // Eixo da direita (porcentagem)
+          backgroundColor: '#ff0000', // Vermelho (Frente - Fino)
+          order: 1,
+          barPercentage: 0.2,
+          yAxisID: 'y1' // Eixo da direita para porcentagem
         }
       ]
     },
@@ -533,83 +413,76 @@ function processAndDrawHistory(historyRows) {
       maintainAspectRatio: false,
       scales: {
         x: {
-          stacked: true, // Isso centraliza as barras uma na outra
+          stacked: true, // Isso garante que fiquem uma em cima da outra
         },
         y: {
           beginAtZero: true,
-          type: 'linear',
           position: 'left',
-          title: { display: true, text: 'Quantidade de Peças' }
+          title: { display: true, text: 'Quantidade' }
         },
         y1: {
           beginAtZero: true,
-          type: 'linear',
           position: 'right',
-          grid: { display: false }, // esconde grade do eixo secundario
-          title: { display: true, text: '% Não Conforme' },
-          // Sugestão: fixar maximo baixo para a barra vermelha não explodir
-          // max: 5 
+          grid: { display: false },
+          title: { display: true, text: '%' }
         }
       },
       plugins: {
+        legend: { position: 'top' },
         tooltip: {
-          mode: 'index',
-          intersect: false,
-          callbacks: {
-            label: function(context) {
-               let label = context.dataset.label || '';
-               if (label) label += ': ';
-               let val = context.parsed.y;
-               // Se for o eixo de porcentagem (y1) adiciona %
-               if (context.dataset.yAxisID === 'y1') {
-                 return label + val.toFixed(2) + '%';
-               }
-               return label + val.toLocaleString('pt-BR');
+            callbacks: {
+                label: function(context) {
+                    let label = context.dataset.label || '';
+                    if (label) label += ': ';
+                    if (context.dataset.yAxisID === 'y1') {
+                         return label + context.parsed.y + '%';
+                    }
+                    return label + context.parsed.y.toLocaleString('pt-BR');
+                }
             }
-          }
-        },
-        legend: {
-           position: 'bottom'
         }
       }
     }
   });
 }
-	
-/* MAIN */
+
+/* ========================================================
+   INICIALIZAÇÃO (MAIN)
+   ======================================================== */
 async function init(){
-  if(!SHEET_ID || SHEET_ID.includes("1RisWgpsGELH184pSKGB77axrCd7xMfVdBkeK3_HGWP0")){
-    document.body.innerHTML = "<div style='padding:40px;font-size:18px;color:#900'>Cole o ID da planilha (SHEET_ID) no código antes de usar. Veja instruções no topo do arquivo.</div>";
-    return;
-  }
-
- try{
-    // URLs das abas
-    const urlAudit = gsheetCsvUrl(SHEET_NAMES.audit);
-    const urlCheckin = gsheetCsvUrl(SHEET_NAMES.checkin);
-    const urlNcr = gsheetCsvUrl(SHEET_NAMES.ncr);
-    const urlHistory = gsheetCsvUrl(SHEET_NAMES.history); // Nova URL
-
-    // Baixar tudo junto (Promise.all)
+  try{
+    // Baixar todas as abas
     const [auditRows, checkinRows, ncrRows, historyRows] = await Promise.all([
-      fetchCsvAsJson(urlAudit),
-      fetchCsvAsJson(urlCheckin),
-      fetchCsvAsJson(urlNcr),
-      fetchCsvAsJson(urlHistory) // Novo download
+      fetchCsvAsJson(gsheetCsvUrl(SHEET_NAMES.audit)),
+      fetchCsvAsJson(gsheetCsvUrl(SHEET_NAMES.checkin)),
+      fetchCsvAsJson(gsheetCsvUrl(SHEET_NAMES.ncr)),
+      fetchCsvAsJson(gsheetCsvUrl(SHEET_NAMES.history))
     ]);
 
-    // 1. KPIs Gerais e Gráficos Diários
+    console.log("Dados Carregados:", {auditRows, checkinRows, historyRows});
+
+    // 1. Renderizar KPIs e Gráficos Diários
     const k = computeKpis(auditRows, checkinRows, ncrRows);
     renderKpis(k);
-    drawCharts(k, auditRows, checkinRows, ncrRows);
+    drawCharts(k, auditRows, checkinRows);
 
-    // 2. Gráfico da Linha do Tempo (Novo)
-    processAndDrawHistory(historyRows);
+    // 2. Renderizar Histórico Mensal
+    if(historyRows.length > 0) {
+        processAndDrawHistory(historyRows);
+    } else {
+        console.warn("Aba HISTORICO_ANUAL vazia ou não encontrada.");
+    }
 
   } catch(err){
     console.error(err);
-    document.body.insertAdjacentHTML('beforeend', `<div style="margin-top:16px;color:#900">Erro ao carregar dados: ${err.message || err}</div>`);
+    document.body.insertAdjacentHTML('beforeend', 
+      `<div style="margin-top:20px;padding:20px;background:#ffebee;color:#c62828;border-radius:8px">
+         <strong>Erro ao carregar dados:</strong> ${err.message}. <br><br>
+         Verifique se o ID da planilha está correto e se ela foi "Publicada na Web" (Arquivo > Compartilhar > Publicar na Web).
+      </div>`
+    );
   }
+}
 
 init();
 </script>
