@@ -106,6 +106,7 @@
           </div>
         </div>
         <canvas id="chart-checkin" height="150"></canvas>
+       <canvas id="chart-monthly" height="200"></canvas>
         <div style="font-size:12px;color:#666;margin-top:8px" id="meta-note"></div>
       </div>
 
@@ -451,74 +452,91 @@ const checkinData = labels.map(l => checkByDate[l] || 0);
   // (implementação: se tiver linhas diárias compare auditadas daquele dia contra conferidas totais; aqui deixamos uma nota textual)
 }
 /* ============================================================
-   LINHA DO TEMPO MENSAL - HISTÓRICO_ANUAL (CSV)
+   GRÁFICO ANUAL - USANDO A ABA HISTÓRICO_ANUAL
    ============================================================ */
 let chartMonthly = null;
 
-async function drawMonthlyTimeline() {
-  const history = await loadMonthlyHistory();
-  if(!history.length) return;
+async function drawAnnualFromSheet() {
+    const history = await loadAnnualHistory();
 
-  const ctx = document.getElementById('chart-monthly').getContext('2d');
-  if(chartMonthly) chartMonthly.destroy();
+    const labels = history.map(x => x.mes);
+    const conferidas = history.map(x => x.conferidas);
+    const auditadas = history.map(x => x.auditadas);
+    const pctNconf = history.map(x => x.pctNconf);
 
-  chartMonthly = new Chart(ctx, {
-    data: {
-      labels: history.map(r => r.MES),
-      datasets: [
-        {
-          type:'bar',
-          label:'Conferidas',
-          data: history.map(r => n(r.CONFERIDAS)),
-          backgroundColor:'#4A90E2',
-          barPercentage:0.9,
-          categoryPercentage:0.8,
-          yAxisID:'y'
+    const ctx = document.getElementById("chart-monthly").getContext("2d");
+    if (chartMonthly) chartMonthly.destroy();
+
+    chartMonthly = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label:"peças conferidas",
+                    data: conferidas,
+                    backgroundColor:"#3e73c3"
+                },
+                {
+                    label:"peças auditadas",
+                    data: auditadas,
+                    backgroundColor:"#8ad05b"
+                },
+                {
+                    label:"peças não conformes %",
+                    data: pctNconf,
+                    type:"bar",
+                    backgroundColor:"#ff0000",
+                    yAxisID:"y1",
+                    borderWidth:1
+                }
+            ]
         },
-        {
-          type:'bar',
-          label:'Auditadas',
-          data: history.map(r => n(r.AUDITADAS)),
-          backgroundColor:'#7ED321',
-          barPercentage:0.6,
-          categoryPercentage:0.8,
-          yAxisID:'y'
-        },
-        {
-          type:'bar',
-          label:'% NCONF',
-          data: history.map(r => n(r["% NCONF"])),
-          backgroundColor:'#D0021B',
-          barPercentage:0.2,
-          categoryPercentage:0.8,
-          yAxisID:'yP'
+        options:{
+            plugins:{
+                tooltip:{
+                    callbacks:{
+                        afterLabel(ctx){
+                            const h = history[ctx.dataIndex];
+                            return `NCONF: ${h.nconf}`;
+                        }
+                    }
+                }
+            },
+            responsive:true,
+            scales:{
+                y:{ beginAtZero:true },
+                y1:{ beginAtZero:true, position:"right", grid:{display:false} }
+            }
         }
-      ]
-    },
-    options: {
-      responsive:true,
-      scales: {
-        y: { beginAtZero:true },
-        yP: { beginAtZero:true, position:'right', grid:{ drawOnChartArea:false } }
-      },
-      plugins: {
-        legend: { display:false }
-      }
-    }
-  });
+    });
 }
 
-async function loadMonthlyHistory() {
-  return await fetchCsvAsJson(
-    gsheetCsvUrl("HISTÓRICO_ANUAL")
-  );
+/* ============================================================
+   HISTÓRICO ANUAL - LEITURA DA ABA MANUAL
+   ============================================================ */
+async function loadAnnualHistory() {
+    const sheetName = "HISTÓRICO_ANUAL";
+    const url = `${SHEET_URL}&sheet=${sheetName}`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    return data.map(r => ({
+        mes: r["MES"],
+        conferidas: Number(r["CONFERIDAS"] || 0),
+        auditadas: Number(r["AUDITADAS"] || 0),
+        pctAuditadas: Number(String(r["% AUDITADAS"] || "0").replace("%","")),
+        nconf: Number(r["NCONF"] || 0),
+        pctNconf: Number(String(r["% NCONF"] || "0").replace("%",""))
+    }));
 }
 	
 /* MAIN */
 async function init(){
-  if(!SHEET_ID || SHEET_ID.includes("COLE_AQUI")){
+  if(!SHEET_ID || SHEET_ID.includes("1RisWgpsGELH184pSKGB77axrCd7xMfVdBkeK3_HGWP0")){
     document.body.innerHTML = "<div style='padding:40px;font-size:18px;color:#900'>Cole o ID da planilha (SHEET_ID) no código antes de usar. Veja instruções no topo do arquivo.</div>";
     return;
+renderLinhaDoTempoMensal();
   }
 
   try{
@@ -535,8 +553,7 @@ async function init(){
     const k = computeKpis(auditRows, checkinRows, ncrRows);
     renderKpis(k);
     drawCharts(k, auditRows, checkinRows, ncrRows);
-    drawMonthlyTimeline();
-
+    drawAnnualFromSheet();
 
 
   } catch(err){
@@ -544,6 +561,88 @@ async function init(){
     document.body.insertAdjacentHTML('beforeend', `<div style="margin-top:16px;color:#900">Erro ao carregar dados: ${err.message || err}</div>`);
   }
 }
+<script>
+async function renderLinhaDoTempoMensal() {
+  const SHEET_ID = "1RisWgpsGELH184pSKGB77axrCd7xMfVdBkeK3_HGWP0";
+  const gUrl = (n) =>
+    `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(n)}`;
+
+  function n(v) {
+    if (!v) return 0;
+    let s = String(v)
+      .replace(/\./g, "")
+      .replace(",", ".")
+      .replace(/[^\d.-]/g, "");
+    return parseFloat(s) || 0;
+  }
+
+  const history = await new Promise((res) => {
+    Papa.parse(gUrl("HISTÓRICO_ANUAL"), {
+      download: true,
+      header: true,
+      skipEmptyLines: true,
+      complete: (r) => res(r.data),
+      error: () => res([]),
+    });
+  });
+
+  if (!history.length) return;
+
+  const ctx = document.getElementById("chart-monthly");
+  if (!ctx) return;
+
+  if (window.chartMonthly) window.chartMonthly.destroy();
+
+  window.chartMonthly = new Chart(ctx, {
+    data: {
+      labels: history.map((r) => r.MES),
+      datasets: [
+        {
+          type: "bar",
+          label: "Conferidas",
+          data: history.map((r) => n(r.CONFERIDAS)),
+          backgroundColor: "#4A90E2",
+          barPercentage: 0.9,
+          categoryPercentage: 0.8,
+          yAxisID: "y",
+        },
+        {
+          type: "bar",
+          label: "Auditadas",
+          data: history.map((r) => n(r.AUDITADAS)),
+          backgroundColor: "#7ED321",
+          barPercentage: 0.6,
+          categoryPercentage: 0.8,
+          yAxisID: "y",
+        },
+        {
+          type: "bar",
+          label: "% NCONF",
+          data: history.map((r) => n(r["% NCONF"])),
+          backgroundColor: "#D0021B",
+          barPercentage: 0.2,
+          categoryPercentage: 0.8,
+          yAxisID: "yP",
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: { beginAtZero: true },
+        yP: {
+          position: "right",
+          beginAtZero: true,
+          grid: { drawOnChartArea: false },
+        },
+      },
+      plugins: {
+        legend: { display: false },
+      },
+    },
+  });
+}
+</script>
 
 init();
 </script>
