@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="pt-BR">
 <head>
@@ -452,83 +451,67 @@ const checkinData = labels.map(l => checkByDate[l] || 0);
   // (implementação: se tiver linhas diárias compare auditadas daquele dia contra conferidas totais; aqui deixamos uma nota textual)
 }
 /* ============================================================
-   GRÁFICO ANUAL - USANDO A ABA HISTÓRICO_ANUAL
+   LINHA DO TEMPO MENSAL - HISTÓRICO_ANUAL (CSV)
    ============================================================ */
 let chartMonthly = null;
 
-async function drawAnnualFromSheet() {
-    const history = await loadAnnualHistory();
+async function drawMonthlyTimeline() {
+  const history = await loadMonthlyHistory();
+  if(!history.length) return;
 
-    const labels = history.map(x => x.mes);
-    const conferidas = history.map(x => x.conferidas);
-    const auditadas = history.map(x => x.auditadas);
-    const pctNconf = history.map(x => x.pctNconf);
+  const ctx = document.getElementById('chart-monthly').getContext('2d');
+  if(chartMonthly) chartMonthly.destroy();
 
-    const ctx = document.getElementById("chart-monthly").getContext("2d");
-    if (chartMonthly) chartMonthly.destroy();
-
-    chartMonthly = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels,
-            datasets: [
-                {
-                    label:"peças conferidas",
-                    data: conferidas,
-                    backgroundColor:"#3e73c3"
-                },
-                {
-                    label:"peças auditadas",
-                    data: auditadas,
-                    backgroundColor:"#8ad05b"
-                },
-                {
-                    label:"peças não conformes %",
-                    data: pctNconf,
-                    type:"bar",
-                    backgroundColor:"#ff0000",
-                    yAxisID:"y1",
-                    borderWidth:1
-                }
-            ]
+  chartMonthly = new Chart(ctx, {
+    data: {
+      labels: history.map(r => r.MES),
+      datasets: [
+        {
+          type:'bar',
+          label:'Conferidas',
+          data: history.map(r => n(r.CONFERIDAS)),
+          backgroundColor:'#4A90E2',
+          barPercentage:0.9,
+          categoryPercentage:0.8,
+          yAxisID:'y'
         },
-        options:{
-            plugins:{
-                tooltip:{
-                    callbacks:{
-                        afterLabel(ctx){
-                            const h = history[ctx.dataIndex];
-                            return `NCONF: ${h.nconf}`;
-                        }
-                    }
-                }
-            },
-            responsive:true,
-            scales:{
-                y:{ beginAtZero:true },
-                y1:{ beginAtZero:true, position:"right", grid:{display:false} }
-            }
+        {
+          type:'bar',
+          label:'Auditadas',
+          data: history.map(r => n(r.AUDITADAS)),
+          backgroundColor:'#7ED321',
+          barPercentage:0.6,
+          categoryPercentage:0.8,
+          yAxisID:'y'
+        },
+        {
+          type:'bar',
+          label:'% NCONF',
+          data: history.map(r => n(r["% NCONF"])),
+          backgroundColor:'#D0021B',
+          barPercentage:0.2,
+          categoryPercentage:0.8,
+          yAxisID:'yP'
         }
-    });
+      ]
+    },
+    options: {
+      responsive:true,
+      scales: {
+        y: { beginAtZero:true },
+        yP: { beginAtZero:true, position:'right', grid:{ drawOnChartArea:false } }
+      },
+      plugins: {
+        legend: { display:false }
+      }
+    }
+  });
 }
 
-/* ============================================================
-   HISTÓRICO ANUAL - LEITURA DA ABA MANUAL
-   ============================================================ */
-async function loadAnnualHistory() {
-    const sheetName = "HISTÓRICO_ANUAL";
-    const url = `${SHEET_URL}&sheet=${sheetName}`;
-    const res = await fetch(url);
-    const data = await res.json();
-
-    return data.map(r => ({
-        mes: r["MES"],
-        conferidas: Number(r["CONFERIDAS"] || 0),
-        auditadas: Number(r["AUDITADAS"] || 0),
-        pctAuditadas: Number(String(r["% AUDITADAS"] || "0").replace("%","")),
-        nconf: Number(r["NCONF"] || 0),
-        pctNconf: Number(String(r["% NCONF"] || "0").replace("%",""))
-    }));
+async function loadMonthlyHistory() {
+  return await fetchCsvAsJson(
+    gsheetCsvUrl("HISTÓRICO_ANUAL")
+  );
 }
 	
 /* MAIN */
@@ -552,7 +535,8 @@ async function init(){
     const k = computeKpis(auditRows, checkinRows, ncrRows);
     renderKpis(k);
     drawCharts(k, auditRows, checkinRows, ncrRows);
-    drawAnnualFromSheet();
+    drawMonthlyTimeline();
+
 
 
   } catch(err){
@@ -565,3 +549,4 @@ init();
 </script>
 </body>
 </html>
+
