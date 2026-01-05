@@ -106,7 +106,6 @@
           </div>
         </div>
         <canvas id="chart-checkin" height="150"></canvas>
-       <canvas id="chart-monthly" height="200"></canvas>
         <div style="font-size:12px;color:#666;margin-top:8px" id="meta-note"></div>
       </div>
 
@@ -533,10 +532,9 @@ async function loadAnnualHistory() {
 	
 /* MAIN */
 async function init(){
-  if(!SHEET_ID || SHEET_ID.includes("1RisWgpsGELH184pSKGB77axrCd7xMfVdBkeK3_HGWP0")){
+  if(!SHEET_ID || SHEET_ID.includes("COLE_AQUI")){
     document.body.innerHTML = "<div style='padding:40px;font-size:18px;color:#900'>Cole o ID da planilha (SHEET_ID) no código antes de usar. Veja instruções no topo do arquivo.</div>";
     return;
-renderLinhaDoTempoMensal();
   }
 
   try{
@@ -561,91 +559,8 @@ renderLinhaDoTempoMensal();
     document.body.insertAdjacentHTML('beforeend', `<div style="margin-top:16px;color:#900">Erro ao carregar dados: ${err.message || err}</div>`);
   }
 }
-<script>
-async function renderLinhaDoTempoMensal() {
-  const SHEET_ID = "1RisWgpsGELH184pSKGB77axrCd7xMfVdBkeK3_HGWP0";
-  const gUrl = (n) =>
-    `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(n)}`;
-
-  function n(v) {
-    if (!v) return 0;
-    let s = String(v)
-      .replace(/\./g, "")
-      .replace(",", ".")
-      .replace(/[^\d.-]/g, "");
-    return parseFloat(s) || 0;
-  }
-
-  const history = await new Promise((res) => {
-    Papa.parse(gUrl("HISTÓRICO_ANUAL"), {
-      download: true,
-      header: true,
-      skipEmptyLines: true,
-      complete: (r) => res(r.data),
-      error: () => res([]),
-    });
-  });
-
-  if (!history.length) return;
-
-  const ctx = document.getElementById("chart-monthly");
-  if (!ctx) return;
-
-  if (window.chartMonthly) window.chartMonthly.destroy();
-
-  window.chartMonthly = new Chart(ctx, {
-    data: {
-      labels: history.map((r) => r.MES),
-      datasets: [
-        {
-          type: "bar",
-          label: "Conferidas",
-          data: history.map((r) => n(r.CONFERIDAS)),
-          backgroundColor: "#4A90E2",
-          barPercentage: 0.9,
-          categoryPercentage: 0.8,
-          yAxisID: "y",
-        },
-        {
-          type: "bar",
-          label: "Auditadas",
-          data: history.map((r) => n(r.AUDITADAS)),
-          backgroundColor: "#7ED321",
-          barPercentage: 0.6,
-          categoryPercentage: 0.8,
-          yAxisID: "y",
-        },
-        {
-          type: "bar",
-          label: "% NCONF",
-          data: history.map((r) => n(r["% NCONF"])),
-          backgroundColor: "#D0021B",
-          barPercentage: 0.2,
-          categoryPercentage: 0.8,
-          yAxisID: "yP",
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      scales: {
-        y: { beginAtZero: true },
-        yP: {
-          position: "right",
-          beginAtZero: true,
-          grid: { drawOnChartArea: false },
-        },
-      },
-      plugins: {
-        legend: { display: false },
-      },
-    },
-  });
-}
-</script>
 
 init();
 </script>
 </body>
 </html>
-
