@@ -17,9 +17,9 @@
     header{display:flex;align-items:center;gap:18px;margin-bottom:18px;}
     .grid{display:grid;grid-template-columns:320px 1fr 420px;gap:18px;align-items:start;}
     .col-left,.col-center,.col-right{display:flex;flex-direction:column;gap:18px;}
-    .card,.chart-card{background:#fff;border-radius:var(--card-radius);box-shadow:var(--card-shadow);padding:16px;border:2px solid rgba(0,0,0,.04);}
+    .card,.chart-card{background:#fff;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.08);padding:16px;border:2px solid rgba(0,0,0,.04);}
     .kpi-large{font-size:48px;font-weight:700;text-align:center;}
-    .mini-item{display:flex;justify-content:space-between;padding:6px;background:var(--muted);border-radius:8px;font-size:13px}
+    .mini-item{display:flex;justify-content:space-between;padding:6px;background:#f5f6f7;border-radius:8px;font-size:13px}
     .small-title{font-weight:700;font-size:13px;margin-bottom:8px}
     @media(max-width:1100px){.grid{grid-template-columns:1fr}}
   </style>
@@ -67,7 +67,6 @@
   <div class="chart-card">
     <div class="small-title">Conferidas vs Auditadas</div>
     <canvas id="chart-checkin" height="150"></canvas>
-    <div id="meta-note" style="font-size:12px;color:#666"></div>
   </div>
 
   <div class="chart-card">
@@ -103,58 +102,85 @@
 
 <script>
 const SHEET_ID="1RisWgpsGELH184pSKGB77axrCd7xMfVdBkeK3_HGWP0";
-const SHEET_NAMES={audit:"1",checkin:"2",ncr:"3"};
-const gsheetCsvUrl=s=>`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(s)}`;
-const toNum=v=>Number(String(v||0).replace(",",".").replace("%",""))||0;
+const gsheet=s=>`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(s)}`;
+const num=v=>Number(String(v||0).replace(/\./g,"").replace(",",".").replace("%",""))||0;
 
-function fetchCsv(url){
-  return new Promise(res=>{
-    Papa.parse(url,{download:true,header:true,skipEmptyLines:true,complete:r=>res(r.data)});
-  });
-}
+const fetchCsv=url=>new Promise(r=>Papa.parse(url,{download:true,header:true,skipEmptyLines:true,complete:x=>r(x.data)}));
 
-let chartMonthly=null;
-
-async function drawAnnual(){
-  const rows=await fetchCsv(gsheetCsvUrl("HISTÓRICO_ANUAL"));
-  if(!rows.length) return;
-
-  const ctx=document.getElementById("chart-monthly").getContext("2d");
-  if(chartMonthly) chartMonthly.destroy();
-
-  chartMonthly=new Chart(ctx,{
-    data:{
-      labels:rows.map(r=>r.MES),
-      datasets:[
-        {type:"bar",label:"Conferidas",data:rows.map(r=>toNum(r.CONFERIDAS)),backgroundColor:"#4A90E2"},
-        {type:"bar",label:"Auditadas",data:rows.map(r=>toNum(r.AUDITADAS)),backgroundColor:"#7ED321"},
-        {type:"bar",label:"% NCONF",data:rows.map(r=>toNum(r["% NCONF"])),backgroundColor:"#D0021B",yAxisID:"y1"}
-      ]
-    },
-    options:{scales:{y:{beginAtZero:true},y1:{position:"right",beginAtZero:true,grid:{drawOnChartArea:false}}},plugins:{legend:{display:false}}}
-  });
-}
+let chartMonthly;
 
 async function init(){
-  const [audit,checkin,ncr]=await Promise.all([
-    fetchCsv(gsheetCsvUrl("1")),
-    fetchCsv(gsheetCsvUrl("2")),
-    fetchCsv(gsheetCsvUrl("3"))
+  const [audit,checkin,ncr,history]=await Promise.all([
+    fetchCsv(gsheet("1")),
+    fetchCsv(gsheet("2")),
+    fetchCsv(gsheet("3")),
+    fetchCsv(gsheet("HISTÓRICO_ANUAL"))
   ]);
 
-  let totalAud=0,totalConf=0,totalNc=0;
-  audit.forEach(r=>totalAud+=toNum(r["Peças Auditadas (dia) TOTAL"]));
-  checkin.forEach(r=>totalConf+=toNum(r["CONFERIDAS TOTAL"]||r["CONFERIDAS"]));
-  ncr.forEach(r=>totalNc+=toNum(r.QNTD));
+  let totalAud=0,totalConf=0,totalNc=0,rnc=0,fotos=0;
+  const cats={CALÇADOS:0,VESTUARIOS:0,ACESSORIOS:0,SUPLEMENTOS:0};
+  const forns={}, tipos={};
+
+  audit.forEach(r=>{
+    totalAud+=num(r["Peças Auditadas (dia) TOTAL"]);
+    Object.keys(cats).forEach(c=>cats[c]+=num(r[c]));
+    rnc+=num(r["quantidade de RNC GERADAS"]);
+    fotos+=num(r["fotos"]);
+  });
+
+  checkin.forEach(r=>totalConf+=num(r["CONFERIDAS TOTAL"]||r["CONFERIDAS"]));
+  ncr.forEach(r=>{
+    totalNc+=num(r.QNTD);
+    forns[r.FORNECEDOR]=(forns[r.FORNECEDOR]||0)+num(r.QNTD);
+    tipos[r["TIPO DE AVARIA"]]=(tipos[r["TIPO DE AVARIA"]]||0)+num(r.QNTD);
+  });
 
   document.getElementById("kpi-pecas").innerText=totalAud.toLocaleString("pt-BR");
+  document.getElementById("kpi-taxa").innerText=((totalNc/totalAud)*100).toFixed(1)+"%";
+  document.getElementById("kpi-taxa-qnt").innerText=totalNc+" peças";
   document.getElementById("sum-conferidas").innerText=totalConf.toLocaleString("pt-BR");
   document.getElementById("sum-auditadas").innerText=totalAud.toLocaleString("pt-BR");
-  document.getElementById("pct-auditado").innerText=totalConf?((totalAud/totalConf)*100).toFixed(1)+"%":"--";
-  document.getElementById("kpi-taxa").innerText=totalAud?((totalNc/totalAud)*100).toFixed(1)+"%":"--";
-  document.getElementById("kpi-taxa-qnt").innerText=`${totalNc} peças`;
+  document.getElementById("pct-auditado").innerText=((totalAud/totalConf)*100).toFixed(1)+"%";
+  document.getElementById("rnc-num").innerText=rnc;
+  document.getElementById("fotos-num").innerText=fotos;
 
-  drawAnnual();
+  Object.entries(cats).forEach(([k,v])=>{
+    document.getElementById("categoria-list").innerHTML+=`<div class="mini-item"><span>${k}</span><b>${v}</b></div>`;
+  });
+
+  Object.entries(forns).sort((a,b)=>b[1]-a[1]).slice(0,3)
+    .forEach(([k,v])=>document.getElementById("fornecedores-list").innerHTML+=`<div class="mini-item"><span>${k}</span><b>${v}</b></div>`);
+
+  Object.entries(tipos).forEach(([k,v])=>document.getElementById("tipos-list").innerHTML+=`<div class="mini-item"><span>${k}</span><b>${v}</b></div>`);
+
+  new Chart(chart-checkin,{
+    type:"bar",
+    data:{labels:audit.map(r=>r.Data),datasets:[
+      {label:"Conferidas",data:checkin.map(r=>num(r["CONFERIDAS TOTAL"]||r["CONFERIDAS"])),backgroundColor:"#4A90E2"},
+      {label:"Auditadas",data:audit.map(r=>num(r["Peças Auditadas (dia) TOTAL"])),backgroundColor:"#7ED321"}
+    ]}
+  });
+
+  new Chart(chart-categories,{
+    type:"bar",
+    data:{labels:Object.keys(cats),datasets:[{data:Object.values(cats),backgroundColor:"#8b0000"}]},
+    options:{plugins:{legend:{display:false}}}
+  });
+
+  if(history.length){
+    if(chartMonthly) chartMonthly.destroy();
+    chartMonthly=new Chart(chart-monthly,{
+      data:{
+        labels:history.map(r=>r.MES),
+        datasets:[
+          {type:"bar",data:history.map(r=>num(r.CONFERIDAS)),backgroundColor:"#4A90E2"},
+          {type:"bar",data:history.map(r=>num(r.AUDITADAS)),backgroundColor:"#7ED321"},
+          {type:"bar",data:history.map(r=>num(r["% NCONF"])),backgroundColor:"#D0021B",yAxisID:"y1"}
+        ]
+      },
+      options:{scales:{y:{beginAtZero:true},y1:{position:"right",grid:{drawOnChartArea:false}}},plugins:{legend:{display:false}}}
+    });
+  }
 }
 
 init();
