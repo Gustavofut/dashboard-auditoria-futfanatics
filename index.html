@@ -102,7 +102,7 @@
           <div style="display:flex;gap:12px;align-items:center">
             <div class="legend"><div class="legend-swatch" style="background:#1976d2"></div> Conferidas</div>
             <div class="legend"><div class="legend-swatch" style="background:#0b5f3a"></div> Auditadas</div>
-            <div class="legend"><div class="legend-swatch" style="background:gold"></div> peças H/H</div>
+            <div class="legend"><div class="legend-swatch" style="background:gold"></div> Média peças H/H</div>
           </div>
         </div>
         <canvas id="chart-checkin" height="150"></canvas>
@@ -136,7 +136,7 @@
 </div>
 
       <div class="card">
-        <div class="small-title">Média Peças H/H </div>
+        <div class="small-title">Média Peças H/H</div>
         <div style="font-size:36px;font-weight:800;color:var(--navy)" id="kpi-hh">--</div>
         <div style="font-size:13px;color:#666"></div>
       </div>
@@ -335,7 +335,7 @@ function renderKpis(k){
   const pText = (k.period.min && k.period.max) ? `${k.period.min} → ${k.period.max}` : '--';
   document.getElementById('periodo-text').innerText = pText;
   // meta note (show days below 25% inspection goal)
-  document.getElementById('meta-note').innerText = ;
+  document.getElementById('meta-note').innerText = ``;
 }
 
 /* Desenhar gráficos */
