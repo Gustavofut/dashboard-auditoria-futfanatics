@@ -8,78 +8,153 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
-  <!-- TODO O SEU CSS ORIGINAL — NÃO ALTERADO -->
   <style>
-    /* exatamente igual ao seu */
-    :root{--bg:#fff;--navy:#001C40;--accent:#A4FF00;--muted:#f5f6f7;--card-radius:12px;--card-shadow:0 6px 18px rgba(0,0,0,.08)}
-    html,body{height:100%;margin:0;font-family:Inter,system-ui}
-    body{background:var(--bg);color:var(--navy);padding:18px}
-    header{display:flex;gap:18px;margin-bottom:18px}
-    .grid{display:grid;grid-template-columns:320px 1fr 420px;gap:18px}
-    .card{background:#fff;border-radius:12px;padding:16px;box-shadow:var(--card-shadow)}
+    :root{
+      --bg:#ffffff;--navy:#001C40;--accent:#A4FF00;--muted:#f5f6f7;
+      --card-radius:12px;--card-shadow:0 6px 18px rgba(0,0,0,0.08);
+    }
+    html,body{height:100%;margin:0;font-family:Inter,system-ui;background:var(--bg);color:var(--navy);padding:18px;}
+    header{display:flex;align-items:center;gap:18px;margin-bottom:18px;}
+    .grid{display:grid;grid-template-columns:320px 1fr 420px;gap:18px;align-items:start;}
+    .col-left,.col-center,.col-right{display:flex;flex-direction:column;gap:18px;}
+    .card,.chart-card{background:#fff;border-radius:var(--card-radius);box-shadow:var(--card-shadow);padding:16px;border:2px solid rgba(0,0,0,.04);}
+    .kpi-large{font-size:48px;font-weight:700;text-align:center;}
+    .mini-item{display:flex;justify-content:space-between;padding:6px;background:var(--muted);border-radius:8px;font-size:13px}
     .small-title{font-weight:700;font-size:13px;margin-bottom:8px}
     @media(max-width:1100px){.grid{grid-template-columns:1fr}}
   </style>
 </head>
 
 <body>
-<!-- TODO O HTML ORIGINAL — NÃO ALTERADO -->
-<!-- (mantido exatamente como você enviou) -->
+<header>
+  <img src="FUT.jfif" style="width:44px;height:44px;border-radius:8px">
+  <div>
+    <h1>DASHBOARD CONTROLE DE QUALIDADE NOTURNO - FutFanatics</h1>
+    <div style="font-size:13px;color:#666">Período: <span id="periodo-text">--</span></div>
+  </div>
+</header>
 
-<!-- ================= SCRIPT ================= -->
+<div class="grid">
+
+<!-- LEFT -->
+<div class="col-left">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between">
+      <div>
+        <div style="font-size:12px;color:#666">PEÇAS AUDITADAS</div>
+        <div class="kpi-large" id="kpi-pecas">--</div>
+      </div>
+      <div>
+        <div style="font-size:12px;color:#666">TAXA NCONF</div>
+        <div style="font-size:24px;font-weight:700" id="kpi-taxa">--</div>
+        <div style="font-size:12px" id="kpi-taxa-qnt"></div>
+      </div>
+    </div>
+    <div class="small-title">Distribuição por categoria</div>
+    <div id="categoria-list"></div>
+  </div>
+
+  <div class="card">
+    <div class="small-title">Top 3 Fornecedores Críticos</div>
+    <div id="fornecedores-list"></div>
+    <div class="small-title" style="margin-top:12px">Tipos de Avaria</div>
+    <div id="tipos-list"></div>
+  </div>
+</div>
+
+<!-- CENTER -->
+<div class="col-center">
+  <div class="chart-card">
+    <div class="small-title">Conferidas vs Auditadas</div>
+    <canvas id="chart-checkin" height="150"></canvas>
+    <div id="meta-note" style="font-size:12px;color:#666"></div>
+  </div>
+
+  <div class="chart-card">
+    <div class="small-title">Peças por Categoria (Check-in)</div>
+    <canvas id="chart-categories" height="120"></canvas>
+    <div style="margin-top:10px;font-size:24px;font-weight:700">
+      <span id="rnc-num">--</span> RNC |
+      <span id="fotos-num">--</span> Fotos
+    </div>
+  </div>
+</div>
+
+<!-- RIGHT -->
+<div class="col-right">
+  <div class="card">
+    <div class="small-title">Linha do Tempo Mensal</div>
+    <canvas id="chart-monthly" height="180"></canvas>
+  </div>
+
+  <div class="card">
+    <div class="small-title">Média Peças H/H</div>
+    <div style="font-size:36px;font-weight:800" id="kpi-hh">--</div>
+  </div>
+
+  <div class="card">
+    <div class="small-title">Resumo</div>
+    <div class="mini-item"><span>Conferidas</span><b id="sum-conferidas">--</b></div>
+    <div class="mini-item"><span>Auditadas</span><b id="sum-auditadas">--</b></div>
+    <div class="mini-item"><span>% Auditado</span><b id="pct-auditado">--</b></div>
+  </div>
+</div>
+</div>
+
 <script>
-const SHEET_ID = "1RisWgpsGELH184pSKGB77axrCd7xMfVdBkeK3_HGWP0";
+const SHEET_ID="1RisWgpsGELH184pSKGB77axrCd7xMfVdBkeK3_HGWP0";
+const SHEET_NAMES={audit:"1",checkin:"2",ncr:"3"};
+const gsheetCsvUrl=s=>`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(s)}`;
+const toNum=v=>Number(String(v||0).replace(",",".").replace("%",""))||0;
 
-function gsheetCsvUrl(sheet){
-  return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet)}`;
-}
-
-/* ================= LINHA DO TEMPO MENSAL — FUNCIONAL ================= */
-let chartMonthly = null;
-
-function drawMonthlyTimeline(){
-  Papa.parse(gsheetCsvUrl("HISTÓRICO_ANUAL"),{
-    download:true,
-    header:true,
-    skipEmptyLines:true,
-    complete:function(res){
-      const h = res.data;
-      if(!h.length) return;
-
-      const labels = h.map(r=>r.MES);
-      const conferidas = h.map(r=>Number(r.CONFERIDAS||0));
-      const auditadas = h.map(r=>Number(r.AUDITADAS||0));
-      const pctNconf = h.map(r=>Number(String(r["% NCONF"]||"0").replace("%","").replace(",",".")));
-
-      const ctx = document.getElementById("chart-monthly").getContext("2d");
-      if(chartMonthly) chartMonthly.destroy();
-
-      chartMonthly = new Chart(ctx,{
-        data:{
-          labels,
-          datasets:[
-            {type:"bar",label:"Conferidas",data:conferidas,backgroundColor:"#1976d2",yAxisID:"y"},
-            {type:"bar",label:"Auditadas",data:auditadas,backgroundColor:"#0b5f3a",yAxisID:"y"},
-            {type:"bar",label:"% NCONF",data:pctNconf,backgroundColor:"#d0021b",yAxisID:"yP"}
-          ]
-        },
-        options:{
-          responsive:true,
-          plugins:{legend:{display:false}},
-          scales:{
-            y:{beginAtZero:true},
-            yP:{beginAtZero:true,position:"right",grid:{drawOnChartArea:false}}
-          }
-        }
-      });
-    }
+function fetchCsv(url){
+  return new Promise(res=>{
+    Papa.parse(url,{download:true,header:true,skipEmptyLines:true,complete:r=>res(r.data)});
   });
 }
 
-/* ================= INIT ================= */
+let chartMonthly=null;
+
+async function drawAnnual(){
+  const rows=await fetchCsv(gsheetCsvUrl("HISTÓRICO_ANUAL"));
+  if(!rows.length) return;
+
+  const ctx=document.getElementById("chart-monthly").getContext("2d");
+  if(chartMonthly) chartMonthly.destroy();
+
+  chartMonthly=new Chart(ctx,{
+    data:{
+      labels:rows.map(r=>r.MES),
+      datasets:[
+        {type:"bar",label:"Conferidas",data:rows.map(r=>toNum(r.CONFERIDAS)),backgroundColor:"#4A90E2"},
+        {type:"bar",label:"Auditadas",data:rows.map(r=>toNum(r.AUDITADAS)),backgroundColor:"#7ED321"},
+        {type:"bar",label:"% NCONF",data:rows.map(r=>toNum(r["% NCONF"])),backgroundColor:"#D0021B",yAxisID:"y1"}
+      ]
+    },
+    options:{scales:{y:{beginAtZero:true},y1:{position:"right",beginAtZero:true,grid:{drawOnChartArea:false}}},plugins:{legend:{display:false}}}
+  });
+}
+
 async function init(){
-  // todo o seu init original continua aqui
-  drawMonthlyTimeline(); // ← única linha adicionada
+  const [audit,checkin,ncr]=await Promise.all([
+    fetchCsv(gsheetCsvUrl("1")),
+    fetchCsv(gsheetCsvUrl("2")),
+    fetchCsv(gsheetCsvUrl("3"))
+  ]);
+
+  let totalAud=0,totalConf=0,totalNc=0;
+  audit.forEach(r=>totalAud+=toNum(r["Peças Auditadas (dia) TOTAL"]));
+  checkin.forEach(r=>totalConf+=toNum(r["CONFERIDAS TOTAL"]||r["CONFERIDAS"]));
+  ncr.forEach(r=>totalNc+=toNum(r.QNTD));
+
+  document.getElementById("kpi-pecas").innerText=totalAud.toLocaleString("pt-BR");
+  document.getElementById("sum-conferidas").innerText=totalConf.toLocaleString("pt-BR");
+  document.getElementById("sum-auditadas").innerText=totalAud.toLocaleString("pt-BR");
+  document.getElementById("pct-auditado").innerText=totalConf?((totalAud/totalConf)*100).toFixed(1)+"%":"--";
+  document.getElementById("kpi-taxa").innerText=totalAud?((totalNc/totalAud)*100).toFixed(1)+"%":"--";
+  document.getElementById("kpi-taxa-qnt").innerText=`${totalNc} peças`;
+
+  drawAnnual();
 }
 
 init();
