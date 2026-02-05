@@ -1,4 +1,4 @@
-<!doctype html>
+VOLUMES<!doctype html>
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
@@ -208,7 +208,7 @@ const COLMAP = {
   audit_supl: "SUPLEMENTOS",
   audit_colabs: "Qtd. Colaboradoras", 
   audit_tempo: "Tempo por colaboradora (min)", 
-  audit_fotos: "fotos",
+  audit_VOLUMES: "VOLUMES",
   turno: "Turno" 
 };
 
@@ -276,7 +276,7 @@ function computeKpis(auditRows, checkinRows, ncrRows){
   auditRows.forEach(r=>{
     let pecasDia = toNumber(r[COLMAP.audit_total]);
     totalAud += pecasDia;
-    volSum += toNumber(r[COLMAP.audit_fotos]);
+    volSum += toNumber(r[COLMAP.audit_VOLUMES]);
     
     // Cálculo de produtividade ponderada
     let nColabs = toNumber(r[COLMAP.audit_colabs]);
