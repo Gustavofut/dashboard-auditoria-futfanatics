@@ -158,7 +158,7 @@
         </div>
         
         <div style="width:220px; background:#f9fafb; padding:10px; border-radius:8px; border:1px solid #eee;">
-          <div class="small-title" style="margin-bottom:12px; text-transform:uppercase;">Check-in</div>
+          <div class="small-title" style="margin-bottom:12px; text-transform:uppercase;">Resumo Check-in</div>
           <div style="margin-bottom:10px;">
              <div style="font-size:28px;font-weight:800;color:var(--navy);line-height:1;" id="vol-checkin-display">--</div>
              <div style="font-size:11px;font-weight:700;color:#666; letter-spacing:0.5px;">PEÇAS CONFERIDAS</div>
@@ -206,7 +206,8 @@ const COLMAP = {
   audit_vest: "VESTUARIOS",
   audit_acess: "ACESSORIOS",
   audit_supl: "SUPLEMENTOS",
-  audit_phh: "Peças por Hora",
+  audit_colabs: "Qtd. Colaboradoras", 
+  audit_tempo: "Tempo por colaboradora (min)", 
   audit_fotos: "fotos",
   turno: "Turno" 
 };
@@ -268,17 +269,28 @@ function checkRow(row, dateColName, dtInicio, dtFim, turnoDesejado) {
 
 function computeKpis(auditRows, checkinRows, ncrRows){
   const toNumber = v => Number(String(v || 0).replace(",",".").replace(/\s/g,'')) || 0;
-  let totalAud = 0, volSum = 0, phhArr = [], datas = [];
+  let totalAud = 0, volSum = 0, datas = [];
+  let totalHorasHomem = 0; // Acumulador para o cálculo real de H/H
   let cAud = {CALÇADOS:0, VESTUARIOS:0, ACESSORIOS:0, SUPLEMENTOS:0};
 
   auditRows.forEach(r=>{
-    totalAud += toNumber(r[COLMAP.audit_total]);
+    let pecasDia = toNumber(r[COLMAP.audit_total]);
+    totalAud += pecasDia;
     volSum += toNumber(r[COLMAP.audit_fotos]);
+    
+    // Cálculo de produtividade ponderada
+    let nColabs = toNumber(r[COLMAP.audit_colabs]);
+    let nTempoMin = toNumber(r[COLMAP.audit_tempo]);
+    // Transforma pessoas * minutos em Total de Horas
+    if(nColabs > 0 && nTempoMin > 0) {
+        totalHorasHomem += (nColabs * (nTempoMin / 60));
+    }
+
     cAud.CALÇADOS += toNumber(r[COLMAP.audit_cald]);
     cAud.VESTUARIOS += toNumber(r[COLMAP.audit_vest]);
     cAud.ACESSORIOS += toNumber(r[COLMAP.audit_acess]);
     cAud.SUPLEMENTOS += toNumber(r[COLMAP.audit_supl]);
-    if(toNumber(r[COLMAP.audit_phh])) phhArr.push(toNumber(r[COLMAP.audit_phh]));
+    
     if(r[COLMAP.audit_date]) datas.push(r[COLMAP.audit_date]);
   });
 
@@ -300,11 +312,14 @@ function computeKpis(auditRows, checkinRows, ncrRows){
     forn[f] = (forn[f]||0) + q; tips[t] = (tips[t]||0) + q; totAv += q;
   });
 
+  // Cálculo final da Média Ponderada Global
+  let phhReal = totalHorasHomem > 0 ? (totalAud / totalHorasHomem) : 0;
+
   return {
     periodText: datas.length > 0 ? `${datas[0]} ... ${datas[datas.length-1]}` : "--",
     totalAud, totalConf, volSum, cAud, cCheck, forn, tips, totAv,
     taxa: totalAud>0 ? totAv/totalAud : 0,
-    mediaPhh: phhArr.length>0 ? phhArr.reduce((a,b)=>a+b,0)/phhArr.length : 0
+    mediaPhh: phhReal
   };
 }
 
@@ -340,22 +355,33 @@ let chartCheckin = null, chartCats = null, chartMonthly = null;
 
 function drawCharts(k, auditRows, checkinRows){
   const dataMap = {};
+  
+  // Agrupamento para o gráfico diário com cálculo real de H/H
   auditRows.forEach(r => {
     const d = r[COLMAP.audit_date]; if(!d) return;
-    if(!dataMap[d]) dataMap[d] = { aud: 0, conf: 0, phh: [] };
-    dataMap[d].aud += Number(r[COLMAP.audit_total] || 0);
-    dataMap[d].phh.push(Number(r[COLMAP.audit_phh] || 0));
+    if(!dataMap[d]) dataMap[d] = { aud: 0, conf: 0, horas: 0 };
+    
+    let qtd = Number(String(r[COLMAP.audit_total] || 0).replace(",",".").replace(/\s/g,''));
+    let colabs = Number(String(r[COLMAP.audit_colabs] || 0).replace(",",".").replace(/\s/g,''));
+    let tempo = Number(String(r[COLMAP.audit_tempo] || 0).replace(",",".").replace(/\s/g,''));
+    
+    dataMap[d].aud += qtd;
+    // Soma as horas totais daquele dia (para calcular a média do dia corretamente)
+    dataMap[d].horas += (colabs * (tempo / 60)); 
   });
+
   checkinRows.forEach(r => {
     const d = r["Data"] || r["DATA"]; if(!d) return;
-    if(!dataMap[d]) dataMap[d] = { aud: 0, conf: 0, phh: [] };
-    dataMap[d].conf += Number(r["CONFERIDAS TOTAL"] ?? r["CONFERIDAS"] ?? 0);
+    if(!dataMap[d]) dataMap[d] = { aud: 0, conf: 0, horas: 0 };
+    let qtd = Number(String(r["CONFERIDAS TOTAL"] ?? r["CONFERIDAS"] ?? 0).replace(",",".").replace(/\s/g,''));
+    dataMap[d].conf += qtd;
   });
 
   const labels = Object.keys(dataMap).sort((a,b) => parseSheetDate(a) - parseSheetDate(b));
   const confData = labels.map(l => dataMap[l].conf);
   const audData = labels.map(l => dataMap[l].aud);
-  const phhData = labels.map(l => dataMap[l].phh.length ? dataMap[l].phh.reduce((a,b)=>a+b,0)/dataMap[l].phh.length : 0);
+  // Cálculo da linha do gráfico: Total Auditado no Dia / Total Horas Gastas no Dia
+  const phhData = labels.map(l => dataMap[l].horas > 0 ? (dataMap[l].aud / dataMap[l].horas) : 0);
 
   const ctx = document.getElementById('chart-checkin').getContext('2d');
   if(chartCheckin) chartCheckin.destroy();
@@ -382,6 +408,9 @@ function drawCharts(k, auditRows, checkinRows){
                 let confVal = context.chart.data.datasets[0].data[context.dataIndex] || 0;
                 let perc = confVal > 0 ? ((val / confVal) * 100).toFixed(1) : 0;
                 return `${label}: ${val.toLocaleString('pt-BR')} (${perc}%)`;
+              }
+              if (label.includes('H/H')) {
+                  return `${label}: ${val.toFixed(1)}`;
               }
               return `${label}: ${val.toLocaleString('pt-BR')}`;
             }
