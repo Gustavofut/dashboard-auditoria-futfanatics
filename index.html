@@ -240,8 +240,20 @@ function configurarFiltroInicial() {
 }
 
 function aplicarFiltros() {
-    const dtInicio = document.getElementById('filtro-inicio').value ? new Date(document.getElementById('filtro-inicio').value) : null;
-    const dtFim = document.getElementById('filtro-fim').value ? new Date(document.getElementById('filtro-fim').value) : null;
+    let dtInicio = null;
+    const inicioVal = document.getElementById('filtro-inicio').value;
+    if (inicioVal) {
+        const [ano, mes, dia] = inicioVal.split('-');
+        dtInicio = new Date(ano, mes - 1, dia); // Força fuso horário local correto
+    }
+
+    let dtFim = null;
+    const fimVal = document.getElementById('filtro-fim').value;
+    if (fimVal) {
+        const [ano, mes, dia] = fimVal.split('-');
+        dtFim = new Date(ano, mes - 1, dia); // Força fuso horário local correto
+    }
+    
     const turnoVal = document.getElementById('filtro-turno').value;
 
     const fAudit = GLOBAL_DATA.audit.filter(r => checkRow(r, COLMAP.audit_date, dtInicio, dtFim, turnoVal));
@@ -270,7 +282,7 @@ function checkRow(row, dateColName, dtInicio, dtFim, turnoDesejado) {
 function computeKpis(auditRows, checkinRows, ncrRows){
   const toNumber = v => Number(String(v || 0).replace(",",".").replace(/\s/g,'')) || 0;
   let totalAud = 0, volSum = 0, datas = [];
-  let totalHorasHomem = 0; // Acumulador para o cálculo real de H/H
+  let totalHorasHomem = 0; 
   let cAud = {CALÇADOS:0, VESTUARIOS:0, ACESSORIOS:0, SUPLEMENTOS:0};
 
   auditRows.forEach(r=>{
@@ -278,10 +290,8 @@ function computeKpis(auditRows, checkinRows, ncrRows){
     totalAud += pecasDia;
     volSum += toNumber(r[COLMAP.audit_VOLUMES]);
     
-    // Cálculo de produtividade ponderada
     let nColabs = toNumber(r[COLMAP.audit_colabs]);
     let nTempoMin = toNumber(r[COLMAP.audit_tempo]);
-    // Transforma pessoas * minutos em Total de Horas
     if(nColabs > 0 && nTempoMin > 0) {
         totalHorasHomem += (nColabs * (nTempoMin / 60));
     }
@@ -312,7 +322,6 @@ function computeKpis(auditRows, checkinRows, ncrRows){
     forn[f] = (forn[f]||0) + q; tips[t] = (tips[t]||0) + q; totAv += q;
   });
 
-  // Cálculo final da Média Ponderada Global
   let phhReal = totalHorasHomem > 0 ? (totalAud / totalHorasHomem) : 0;
 
   return {
@@ -356,7 +365,6 @@ let chartCheckin = null, chartCats = null, chartMonthly = null;
 function drawCharts(k, auditRows, checkinRows){
   const dataMap = {};
   
-  // Agrupamento para o gráfico diário com cálculo real de H/H
   auditRows.forEach(r => {
     const d = r[COLMAP.audit_date]; if(!d) return;
     if(!dataMap[d]) dataMap[d] = { aud: 0, conf: 0, horas: 0 };
@@ -366,7 +374,6 @@ function drawCharts(k, auditRows, checkinRows){
     let tempo = Number(String(r[COLMAP.audit_tempo] || 0).replace(",",".").replace(/\s/g,''));
     
     dataMap[d].aud += qtd;
-    // Soma as horas totais daquele dia (para calcular a média do dia corretamente)
     dataMap[d].horas += (colabs * (tempo / 60)); 
   });
 
@@ -380,7 +387,6 @@ function drawCharts(k, auditRows, checkinRows){
   const labels = Object.keys(dataMap).sort((a,b) => parseSheetDate(a) - parseSheetDate(b));
   const confData = labels.map(l => dataMap[l].conf);
   const audData = labels.map(l => dataMap[l].aud);
-  // Cálculo da linha do gráfico: Total Auditado no Dia / Total Horas Gastas no Dia
   const phhData = labels.map(l => dataMap[l].horas > 0 ? (dataMap[l].aud / dataMap[l].horas) : 0);
 
   const ctx = document.getElementById('chart-checkin').getContext('2d');
